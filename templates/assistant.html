@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}AI Assistant{% endblock %}
+{% block page_title %}AI Assistant{% endblock %}
+{% block page_subtitle %}Ask questions about your properties and leads — answers come straight from your CRM database{% endblock %}
+
+{% block content %}
+<section class="chat-layout">
+    <div class="chat-panel panel">
+        <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
+            <div>
+                <h2>Property CRM Assistant</h2>
+                <span class="chat-status"><span class="status-dot"></span> Online · reads live CRM data</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant-message">
+                <div class="message-content">
+                    👋 Hello! I'm your <strong>Property CRM Assistant</strong>.<br/><br/>
+                    I read directly from your SQLite database, so ask me about properties, leads, and stats.<br/><br/>
+                    <strong>Examples you can try:</strong>
+                    <div class="suggestion-chips">
+                        <button class="chip" data-question="Show me properties with a swimming pool.">Properties with a pool</button>
+                        <button class="chip" data-question="Show me properties near a metro station.">Near a metro station</button>
+                        <button class="chip" data-question="Show me sea-view properties.">Sea-view properties</button>
+                        <button class="chip" data-question="Show me properties on the 15th floor.">On the 15th floor</button>
+                        <button class="chip" data-question="Show me 2-bedroom properties in Dubai with swimming pool">2BHK in Dubai with pool</button>
+                        <button class="chip" data-question="How many properties are sold?">How many sold?</button>
+                        <button class="chip" data-question="Show available properties in Chennai">Available in Chennai</button>
+                        <button class="chip" data-question="How many properties have a swimming pool?">How many have a pool?</button>
+                        <button class="chip" data-question="How many leads do I have?">How many leads?</button>
+                        <button class="chip" data-question="Give me stats">Dashboard stats</button>
+                        <button class="chip" data-question="List all properties">List all properties</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <form class="chat-input-bar" id="chatForm" autocomplete="off">
+            <input type="text" id="chatInput" class="input chat-input"
+                   placeholder="Type your question…" maxlength="500" />
+            <button type="submit" class="btn btn-primary" id="chatSend">Send ➤</button>
+        </form>
+    </div>
+
+    <aside class="chat-help panel">
+        <h3>💡 What can I ask?</h3>
+        <ul class="help-list">
+            <li><strong>Search properties</strong> by city, bedrooms, pool, metro, status, <strong>floor</strong> and <strong>view</strong> — e.g. <em>"sea-view properties"</em>, <em>"on the 15th floor"</em></li>
+            <li><strong>Count listings</strong> — sold, rented, available, total, or filtered (e.g. “with a pool”)</li>
+            <li><strong>Lead & client counts</strong></li>
+            <li><strong>Dashboard overview</strong> — full CRM stats</li>
+        </ul>
+        <h3>🔑 Understand the flow</h3>
+        <p class="muted small">The browser sends your question to <code>/api/assistant</code>. Flask passes it to
+        <code>ai_assistant.py</code>, which queries the <code>crm.db</code> SQLite file and returns a human-readable answer —
+        all offline, no external AI API needed.</p>
+    </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
+{% endblock %}

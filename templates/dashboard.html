@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Your property business at a glance{% endblock %}
+
+{% block content %}
+<!-- ===== STAT CARDS ===== -->
+<section class="stat-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">🏢</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ stats.total_properties }}</span>
+            <span class="stat-label">Total Properties</span>
+        </div>
+    </div>
+
+    <div class="stat-card stat-green">
+        <div class="stat-icon">🟢</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ stats.available }}</span>
+            <span class="stat-label">Available</span>
+        </div>
+    </div>
+
+    <div class="stat-card stat-red">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ stats.sold }}</span>
+            <span class="stat-label">Sold</span>
+        </div>
+    </div>
+
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">🟠</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ stats.rented }}</span>
+            <span class="stat-label">Rented</span>
+        </div>
+    </div>
+
+    <div class="stat-card stat-purple">
+        <div class="stat-icon">👥</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ stats.total_leads }}</span>
+            <span class="stat-label">Total Leads</span>
+        </div>
+    </div>
+</section>
+
+<!-- ===== QUICK ACTIONS ===== -->
+<section class="quick-actions">
+    <h2 class="section-title">Quick Actions</h2>
+    <div class="action-row">
+        <a href="{{ url_for('add_property_page') }}" class="action-btn action-primary">➕ Add Property</a>
+        <a href="{{ url_for('add_lead_page') }}" class="action-btn action-secondary">👤 Add Lead</a>
+        <a href="{{ url_for('assistant_page') }}" class="action-btn action-ai">🤖 Ask the AI</a>
+    </div>
+</section>
+
+<div class="two-col">
+    <!-- ===== RECENT PROPERTIES ===== -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Recent Properties</h2>
+            <a href="{{ url_for('properties_page') }}" class="link">View all →</a>
+        </div>
+        <div class="panel-body">
+            {% if properties %}
+            <div class="mini-list">
+                {% for p in properties %}
+                <div class="mini-item">
+                    <div class="mini-info">
+                        <strong>
+                            <a class="row-link" href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
+                        </strong>
+                        <span class="muted">{{ p.location }}</span>
+                    </div>
+                    <div class="mini-meta">
+                        <span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span>
+                        <span class="price">₹{{ "{:,.0f}".format(p.price) }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">No properties yet. <a href="{{ url_for('add_property_page') }}">Add your first property</a>.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- ===== RECENT LEADS ===== -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Recent Leads</h2>
+            <a href="{{ url_for('leads_page') }}" class="link">View all →</a>
+        </div>
+        <div class="panel-body">
+            {% if leads %}
+            <div class="mini-list">
+                {% for l in leads %}
+                <div class="mini-item">
+                    <div class="mini-info">
+                        <strong>{{ l.client_name }}</strong>
+                        <span class="muted">{{ l.preferred_location or '—' }} · {{ l.bedrooms_needed or '—' }} BHK</span>
+                    </div>
+                    <div class="mini-meta">
+                        <span class="badge badge-{{ l.status|lower|replace(' ', '-') }}">{{ l.status }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">No leads yet. <a href="{{ url_for('add_lead_page') }}">Add your first lead</a>.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endblock %}

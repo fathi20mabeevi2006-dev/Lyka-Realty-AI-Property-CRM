@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Property' if action == 'edit' else 'Add Property' }}{% endblock %}
+{% block page_title %}{{ 'Edit Property' if action == 'edit' else 'Add Property' }}{% endblock %}
+{% block page_subtitle %}Fill in the details below{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+    <div class="panel-body">
+        <form method="post" enctype="multipart/form-data" class="crm-form" id="propertyForm">
+            <div class="form-grid">
+
+                {# ---------- Section: Basic details ---------- #}
+                <div class="form-section-title span-2">Basic Details</div>
+
+                <div class="form-group span-2">
+                    <label for="name">Property Name <span class="req">*</span></label>
+                    <input type="text" id="name" name="name" class="input"
+                           value="{{ property.name if property else '' }}"
+                           placeholder="e.g. Marina View Penthouse" required />
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="location">Location <span class="req">*</span></label>
+                    <input type="text" id="location" name="location" class="input"
+                           value="{{ property.location if property else '' }}"
+                           placeholder="e.g. Dubai Marina, Dubai" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price (₹) <span class="req">*</span></label>
+                    <input type="number" id="price" name="price" class="input" min="0" step="1"
+                           value="{{ property.price if property else '' }}"
+                           placeholder="e.g. 12000000" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="bedrooms">Bedrooms <span class="req">*</span></label>
+                    <input type="number" id="bedrooms" name="bedrooms" class="input" min="0"
+                           value="{{ property.bedrooms if property else '' }}" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="bathrooms">Bathrooms <span class="req">*</span></label>
+                    <input type="number" id="bathrooms" name="bathrooms" class="input" min="0"
+                           value="{{ property.bathrooms if property else '' }}" required />
+                </div>
+
+                {# ---------- Section: Features & amenities (Phase 1 fields) ---------- #}
+                <div class="form-section-title span-2">Features &amp; Amenities</div>
+
+                <div class="form-group">
+                    <label for="floor_number">Floor Number</label>
+                    <input type="number" id="floor_number" name="floor_number" class="input"
+                           min="0" step="1"
+                           value="{{ property.floor_number if property and property.floor_number is not none else '' }}"
+                           placeholder="e.g. 12 (0 = ground floor)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="property_view">Property View</label>
+                    <select id="property_view" name="property_view" class="input select">
+                        {% set current_view = (property.property_view or '') if property else '' %}
+                        <option value="" {{ 'selected' if not current_view }}>None</option>
+                        {% set views = ['Sea View', 'City View', 'Beach View', 'Garden View',
+                                        'Lake View', 'Pool View', 'Canal View', 'Market View',
+                                        'Street View', 'Forest View', 'Hill View'] %}
+                        {% for v in views %}
+                            <option value="{{ v }}" {{ 'selected' if current_view == v }}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="has_swimming_pool">Swimming Pool</label>
+                    <select id="has_swimming_pool" name="has_swimming_pool" class="input select">
+                        {% set pool_val = property.has_swimming_pool if property else 'No' %}
+                        <option value="No" {{ 'selected' if pool_val != 'Yes' }}>No</option>
+                        <option value="Yes" {{ 'selected' if pool_val == 'Yes' }}>Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="nearby_metro">Nearby Metro</label>
+                    <select id="nearby_metro" name="nearby_metro" class="input select">
+                        {% set metro_val = property.nearby_metro if property else 'No' %}
+                        <option value="No" {{ 'selected' if metro_val != 'Yes' }}>No</option>
+                        <option value="Yes" {{ 'selected' if metro_val == 'Yes' }}>Yes</option>
+                    </select>
+                </div>
+
+                {# ---------- Section: Photos ---------- #}
+                <div class="form-section-title span-2">Photos</div>
+
+                <div class="form-group span-2">
+                    <label for="images">Upload Images <span class="muted">(optional — JPG, PNG, GIF, WEBP · up to 10 MB total)</span></label>
+                    <input type="file" id="images" name="images" class="input file-input"
+                           multiple accept="image/*" />
+                    <span class="muted small">Hold <strong>Ctrl</strong> / <strong>Cmd</strong> to select multiple images.</span>
+                </div>
+
+                {# ---------- Section: Listing status ---------- #}
+                <div class="form-section-title span-2">Listing Status</div>
+
+                <div class="form-group span-2">
+                    <label for="status">Status <span class="req">*</span></label>
+                    <select id="status" name="status" class="input select" required>
+                        {% for s in ['Available', 'Sold', 'Rented'] %}
+                            <option value="{{ s }}" {{ 'selected' if property and property.status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    {{ '💾 Save Changes' if action == 'edit' else '➕ Add Property' }}
+                </button>
+                <a href="{{ url_for('property_detail_page', property_id=property.id) if action == 'edit' and property else url_for('properties_page') }}"
+                   class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+
+        {% if action == 'edit' and images %}
+        {# Separate section (outside the form) so delete buttons can use their own forms #}
+        <div class="current-photos">
+            <h3 class="current-photos-title">
+                Current Photos <span class="muted">({{ images|length }})</span>
+            </h3>
+            <div class="current-photos-grid">
+                {% for img in images %}
+                <div class="current-photo">
+                    <img src="{{ url_for('static', filename='uploads/properties/' ~ img.filename) }}"
+                         alt="Property photo" />
+                    <form method="post"
+                          action="{{ url_for('delete_property_image_page', property_id=property.id, image_id=img.id) }}"
+                          onsubmit="return confirm('Delete this photo?');"
+                          class="inline-form">
+                        <button type="submit" class="photo-remove" title="Delete photo">✕</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ property.name }}{% endblock %}
+{% block page_title %}{{ property.name }}{% endblock %}
+{% block page_subtitle %}{{ property.location }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('properties_page') }}">Properties</a>
+    <span>/</span>
+    <span>{{ property.name }}</span>
+</nav>
+
+<!-- ===== Header card ===== -->
+<section class="panel detail-header-panel">
+    <div class="panel-body">
+        <div class="detail-header">
+            <div class="detail-headings">
+                <div class="detail-badges">
+                    <span class="badge badge-{{ property.status|lower }}">{{ property.status }}</span>
+                    {% if property.created_at %}
+                        <span class="muted">Listed {{ property.created_at[:10] }}</span>
+                    {% endif %}
+                </div>
+                <h2 class="detail-title">{{ property.name }}</h2>
+                <p class="detail-location">📍 {{ property.location }}</p>
+                <p class="detail-price">₹{{ "{:,.0f}".format(property.price) }}</p>
+            </div>
+            <div class="detail-actions">
+                <a href="{{ url_for('edit_property_page', property_id=property.id) }}" class="btn btn-primary">✏️ Edit</a>
+                <form method="post" action="{{ url_for('delete_property_page', property_id=property.id) }}"
+                      onsubmit="return confirm('Delete {{ property.name }}?');" class="inline-form">
+                    <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                </form>
+                <a href="{{ url_for('properties_page') }}" class="btn btn-ghost">← Back to list</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="two-col">
+    <!-- ===== Specification grid ===== -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Property Specifications</h2>
+        </div>
+        <div class="panel-body">
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <span class="spec-label">Bedrooms</span>
+                    <span class="spec-value">{{ property.bedrooms }}</span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Bathrooms</span>
+                    <span class="spec-value">{{ property.bathrooms }}</span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Floor</span>
+                    <span class="spec-value">
+                        {%- if property.floor_number is none %}—
+                        {%- elif property.floor_number == 0 %}Ground
+                        {%- else %}{{ property.floor_number }}{% endif -%}
+                    </span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Property View</span>
+                    <span class="spec-value">{{ property.property_view or 'None' }}</span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Swimming Pool</span>
+                    <span class="spec-value">
+                        <span class="pill {{ 'pill-yes' if property.has_swimming_pool == 'Yes' else 'pill-no' }}">
+                            {{ 'Yes' if property.has_swimming_pool == 'Yes' else 'No' }}
+                        </span>
+                    </span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Nearby Metro</span>
+                    <span class="spec-value">
+                        <span class="pill {{ 'pill-yes' if property.nearby_metro == 'Yes' else 'pill-no' }}">
+                            {{ 'Yes' if property.nearby_metro == 'Yes' else 'No' }}
+                        </span>
+                    </span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Price</span>
+                    <span class="spec-value">₹{{ "{:,.0f}".format(property.price) }}</span>
+                </div>
+                <div class="spec-card">
+                    <span class="spec-label">Status</span>
+                    <span class="spec-value">
+                        <span class="badge badge-{{ property.status|lower }}">{{ property.status }}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== Image gallery ===== -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Photos <span class="muted">({{ images|length }})</span></h2>
+            <a href="{{ url_for('edit_property_page', property_id=property.id) }}" class="link">Manage →</a>
+        </div>
+        <div class="panel-body">
+            {% if images %}
+            <div class="gallery-grid">
+                {% for img in images %}
+                <a class="gallery-item"
+                   href="{{ url_for('static', filename='uploads/properties/' ~ img.filename) }}"
+                   target="_blank" rel="noopener">
+                    <img src="{{ url_for('static', filename='uploads/properties/' ~ img.filename) }}"
+                         alt="Property photo {{ loop.index }}" loading="lazy" />
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="gallery-placeholder">
+                <div class="gallery-icon">🏠📷</div>
+                <p><strong>No photos yet</strong></p>
+                <p class="muted">Add photos on the
+                    <a href="{{ url_for('edit_property_page', property_id=property.id) }}">Edit page</a> —
+                    they will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<!-- ===== Ask the AI about this property ===== -->
+<section class="panel">
+    <div class="panel-body detail-ai-cta">
+        <span>🤖 Ask the AI Assistant about this property — e.g.
+            <em>"Show me properties like {{ property.name }} in {{ property.location }}"</em>
+        </span>
+        <a href="{{ url_for('assistant_page') }}" class="btn btn-ghost btn-sm">Open AI Assistant</a>
+    </div>
+</section>
+{% endblock %}
