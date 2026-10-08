@@ -14,13 +14,15 @@
         <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <div class="brand-logo">🏠</div>
-                <div class="brand-text">
-                    <span class="brand-name">PropAI CRM</span>
-                    <span class="brand-tag">Real Estate Suite</span>
-                </div>
-            </div>
+    <img src="{{ url_for('static', filename='img/logo.jpg') }}"
+         alt="Lyka Realty Logo"
+         class="company-logo">
 
+    <div class="brand-text">
+        <span class="brand-name">Lyka Realty CRM</span>
+        <span class="brand-tag">Real Estate Suite</span>
+    </div>
+</div>
             <nav class="sidebar-nav">
                 <a href="{{ url_for('dashboard') }}" class="nav-item {{ 'active' if request.endpoint == 'dashboard' }}">
                     <span class="nav-icon">📊</span> Dashboard

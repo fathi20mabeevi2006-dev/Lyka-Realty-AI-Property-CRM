@@ -955,3 +955,15 @@ code {
     .message { max-width: 100%; }
     .chat-input-bar { flex-direction: column; }
 }
+.company-logo {
+    width: 140px;
+    height: auto;
+    display: block;
+    margin: 0 auto 12px auto;
+    border-radius: 8px;
+}
+
+.sidebar-brand {
+    text-align: center;
+    padding: 15px;
+}
