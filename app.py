@@ -23,7 +23,7 @@ from database import (
     add_property_images, get_property_images, get_property_image,
     delete_property_image,
 )
-from ai_assistant import answer_question
+from services.groq_service import get_ai_response
 from seed_data import seed
 
 app = Flask(__name__)
@@ -335,12 +335,20 @@ def assistant_page():
 
 @app.route("/api/assistant", methods=["POST"])
 def assistant_api():
-    data = request.get_json(silent=True) or {}
-    message = (data.get("message") or "").strip()
-    reply = answer_question(message)
-    return jsonify({"reply": reply})
+    try:
+        data = request.get_json(silent=True) or {}
+        message = (data.get("message") or "").strip()
 
+        if not message:
+            return jsonify({"reply": "Please enter a message."})
 
+        reply = get_ai_response(message)
+
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        print("Assistant Error:", e)
+        return jsonify({"reply": f"Error: {str(e)}"})
 # ---------------------- RUN ----------------------
 
 if __name__ == "__main__":
