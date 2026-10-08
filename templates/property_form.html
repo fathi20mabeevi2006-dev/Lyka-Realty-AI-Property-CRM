@@ -87,7 +87,27 @@
                         <option value="Yes" {{ 'selected' if metro_val == 'Yes' }}>Yes</option>
                     </select>
                 </div>
+<div class="form-group">
+    <label for="property_type">Property Type</label>
+    <input type="text"
+           id="property_type"
+           name="property_type"
+           class="input"
+           value="{{ property.property_type if property else '' }}"
+           placeholder="Apartment, Villa, Penthouse..." />
+</div>
 
+<div class="form-group">
+    <label for="property_size">Property Size (sqm)</label>
+    <input type="number"
+           id="property_size"
+           name="property_size"
+           class="input"
+           step="0.01"
+           min="0"
+           value="{{ property.property_size if property else '' }}"
+           placeholder="e.g. 125.5" />
+</div>
                 {# ---------- Section: Photos ---------- #}
                 <div class="form-section-title span-2">Photos</div>
 
