@@ -1,63 +1,189 @@
 {% extends "base.html" %}
+
 {% block title %}AI Assistant{% endblock %}
-{% block page_title %}AI Assistant{% endblock %}
-{% block page_subtitle %}Ask questions about your properties and leads — answers come straight from your CRM database{% endblock %}
+
+{% block page_title %}🤖 AI Assistant{% endblock %}
+
+{% block page_subtitle %}
+Smart property search, analytics and CRM insights
+{% endblock %}
 
 {% block content %}
-<section class="chat-layout">
-    <div class="chat-panel panel">
+
+<div class="chat-layout">
+
+    <!-- CHAT AREA -->
+
+    <div class="panel chat-panel">
+
         <div class="chat-header">
             <div class="chat-avatar">🤖</div>
-            <div>
-                <h2>Property CRM Assistant</h2>
-                <span class="chat-status"><span class="status-dot"></span> Online · reads live CRM data</span>
-            </div>
-        </div>
 
-        <div class="chat-messages" id="chatMessages">
-            <div class="message assistant-message">
-                <div class="message-content">
-                    👋 Hello! I'm your <strong>Property CRM Assistant</strong>.<br/><br/>
-                    I read directly from your SQLite database, so ask me about properties, leads, and stats.<br/><br/>
-                    <strong>Examples you can try:</strong>
-                    <div class="suggestion-chips">
-                        <button class="chip" data-question="Show me properties with a swimming pool.">Properties with a pool</button>
-                        <button class="chip" data-question="Show me properties near a metro station.">Near a metro station</button>
-                        <button class="chip" data-question="Show me sea-view properties.">Sea-view properties</button>
-                        <button class="chip" data-question="Show me properties on the 15th floor.">On the 15th floor</button>
-                        <button class="chip" data-question="Show me 2-bedroom properties in Dubai with swimming pool">2BHK in Dubai with pool</button>
-                        <button class="chip" data-question="How many properties are sold?">How many sold?</button>
-                        <button class="chip" data-question="Show available properties in Chennai">Available in Chennai</button>
-                        <button class="chip" data-question="How many properties have a swimming pool?">How many have a pool?</button>
-                        <button class="chip" data-question="How many leads do I have?">How many leads?</button>
-                        <button class="chip" data-question="Give me stats">Dashboard stats</button>
-                        <button class="chip" data-question="List all properties">List all properties</button>
-                    </div>
+            <div>
+                <h2>Lyka Realty AI Assistant</h2>
+
+                <div class="chat-status">
+                    <span class="status-dot"></span>
+                    Connected to Live CRM Database
                 </div>
             </div>
         </div>
 
-        <form class="chat-input-bar" id="chatForm" autocomplete="off">
-            <input type="text" id="chatInput" class="input chat-input"
-                   placeholder="Type your question…" maxlength="500" />
-            <button type="submit" class="btn btn-primary" id="chatSend">Send ➤</button>
+        <div id="chatMessages" class="chat-messages">
+
+            <div class="message">
+
+                <div class="message-avatar">
+                    🤖
+                </div>
+
+                <div class="message-content">
+
+                    <h3>Welcome to Lyka Realty AI</h3>
+
+                    <p>
+                        I can search properties, count leads,
+                        provide dashboard statistics and answer
+                        questions directly from your CRM database.
+                    </p>
+
+                    <br>
+
+                    <strong>Try asking:</strong>
+
+                    <ul>
+                        <li>Dashboard stats</li>
+                        <li>How many leads?</li>
+                        <li>Available properties</li>
+                        <li>Cheapest property</li>
+                        <li>Most expensive property</li>
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <form id="chatForm" class="chat-input-bar">
+
+            <input
+                type="text"
+                id="chatInput"
+                class="input chat-input"
+                placeholder="Ask Lyka Realty AI..."
+            >
+
+            <button
+                type="submit"
+                id="sendBtn"
+                class="btn btn-primary"
+            >
+                🚀 Ask AI
+            </button>
+
         </form>
+
     </div>
 
-    <aside class="chat-help panel">
-        <h3>💡 What can I ask?</h3>
-        <ul class="help-list">
-            <li><strong>Search properties</strong> by city, bedrooms, pool, metro, status, <strong>floor</strong> and <strong>view</strong> — e.g. <em>"sea-view properties"</em>, <em>"on the 15th floor"</em></li>
-            <li><strong>Count listings</strong> — sold, rented, available, total, or filtered (e.g. “with a pool”)</li>
-            <li><strong>Lead & client counts</strong></li>
-            <li><strong>Dashboard overview</strong> — full CRM stats</li>
-        </ul>
-        <h3>🔑 Understand the flow</h3>
-        <p class="muted small">The browser sends your question to <code>/api/assistant</code>. Flask passes it to
-        <code>ai_assistant.py</code>, which queries the <code>crm.db</code> SQLite file and returns a human-readable answer —
-        all offline, no external AI API needed.</p>
-    </aside>
-</section>
+    <!-- RIGHT PANEL -->
+
+    <div class="panel">
+
+        <div class="panel-header">
+            <h2>⚡ AI Features</h2>
+        </div>
+
+        <div class="panel-body">
+
+            <div class="stat-grid">
+
+                <div class="stat-card stat-blue">
+                    <div class="stat-icon">🏢</div>
+
+                    <div class="stat-body">
+                        <div class="stat-label">
+                            Property Search
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-green">
+                    <div class="stat-icon">👥</div>
+
+                    <div class="stat-body">
+                        <div class="stat-label">
+                            Lead Insights
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-purple">
+                    <div class="stat-icon">📊</div>
+
+                    <div class="stat-body">
+                        <div class="stat-label">
+                            CRM Analytics
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <h3>💡 Quick Questions</h3>
+
+            <div class="suggestion-chips">
+
+                <button
+                    class="chip"
+                    data-question="Dashboard stats">
+                    Dashboard stats
+                </button>
+
+                <button
+                    class="chip"
+                    data-question="How many leads?">
+                    How many leads?
+                </button>
+
+                <button
+                    class="chip"
+                    data-question="Available properties">
+                    Available properties
+                </button>
+
+                <button
+                    class="chip"
+                    data-question="Cheapest property">
+                    Cheapest property
+                </button>
+
+                <button
+                    class="chip"
+                    data-question="Most expensive property">
+                    Most expensive property
+                </button>
+
+            </div>
+
+            <br>
+
+            <h3>🔥 Popular Searches</h3>
+
+            <ul>
+                <li>Properties with pool</li>
+                <li>Sea-view properties</li>
+                <li>Properties near metro</li>
+                <li>Available properties in Dubai</li>
+                <li>Sold properties</li>
+            </ul>
+
+        </div>
+
+    </div>
+
+</div>
+
 {% endblock %}
 
 {% block scripts %}

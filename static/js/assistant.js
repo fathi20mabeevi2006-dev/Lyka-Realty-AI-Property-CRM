@@ -27,8 +27,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function speakText(text) {
+    window.speechSynthesis.cancel();
+
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-US";
+    speech.rate = 1;
+    speech.pitch = 1;
+
+    window.speechSynthesis.speak(speech);
+}
 
     function appendMessage(role, contentHtml) {
         const wrapper = document.createElement("div");
@@ -79,9 +90,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 throw new Error("Server error");
             }
 
-            const data = await response.json();
-            typingEl.remove();
-            appendMessage("assistant", renderMarkdown(data.reply || "Sorry, I couldn't answer that."));
+           const data = await response.json();
+typingEl.remove();
+
+const reply =
+    data.reply || "Sorry, I couldn't answer that.";
+
+appendMessage(
+    "assistant",
+    renderMarkdown(reply)
+);
+
+speakText(reply);
         } catch (err) {
             typingEl.remove();
             appendMessage(
@@ -107,3 +127,46 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+/* ---------- Voice Input ---------- */
+
+const voiceBtn = document.getElementById("voiceBtn");
+
+if (voiceBtn) {
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+
+        recognition.lang = "en-US";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        voiceBtn.addEventListener("click", () => {
+            recognition.start();
+            voiceBtn.textContent = "🎙 Listening...";
+        });
+
+        recognition.onresult = (event) => {
+            const transcript =
+                event.results[0][0].transcript;
+
+            document.getElementById("chatInput").value =
+                transcript;
+
+            voiceBtn.textContent = "🎤 Speak";
+        };
+
+        recognition.onerror = () => {
+            voiceBtn.textContent = "🎤 Speak";
+            alert("Microphone error.");
+        };
+
+        recognition.onend = () => {
+            voiceBtn.textContent = "🎤 Speak";
+        };
+    } else {
+        voiceBtn.style.display = "none";
+    }
+}
