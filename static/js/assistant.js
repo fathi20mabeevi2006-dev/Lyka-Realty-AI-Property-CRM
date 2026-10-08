@@ -129,7 +129,7 @@ speakText(reply);
 });
 /* ---------- Voice Input ---------- */
 
-const voiceBtn = document.getElementById("voiceBtn");
+const voiceBtn = document.getElementById("speakBtn");
 
 if (voiceBtn) {
     const SpeechRecognition =
