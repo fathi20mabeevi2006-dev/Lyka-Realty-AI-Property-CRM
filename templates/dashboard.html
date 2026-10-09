@@ -274,6 +274,39 @@
     </section>
 </div>
 
+<!-- ===== FOLLOW-UPS DUE ===== -->
+<div class="two-col">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>⏰ Follow-ups Due</h2>
+            <a href="{{ url_for('leads_page', follow_up='overdue') }}" class="link">View all →</a>
+        </div>
+        <div class="panel-body">
+            {% if due_follow_ups %}
+            <div class="mini-list">
+                {% for l in due_follow_ups %}
+                <div class="mini-item">
+                    <div class="mini-info">
+                        <strong>{{ l.client_name }}</strong>
+                        <span class="muted">{{ l.phone or '—' }} · {{ l.lead_source or 'No source' }} · score {{ l.lead_score or 0 }}</span>
+                    </div>
+                    <div class="mini-meta">
+                        {% if l.next_follow_up < today %}
+                            <span class="badge badge-overdue">Overdue · {{ l.next_follow_up }}</span>
+                        {% else %}
+                            <span class="badge badge-today">Due Today</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">No follow-ups are due right now. 🎉</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
 <!-- ===== RECENT LISTS ===== -->
 <div class="two-col">
     <section class="panel">

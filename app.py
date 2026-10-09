@@ -15,6 +15,7 @@ from flask import (
 )
 import os
 import uuid
+from datetime import datetime
 
 from database import (
     init_db, get_all_properties, get_property, add_property,
@@ -23,13 +24,17 @@ from database import (
     add_property_images, get_property_images, get_property_image,
     delete_property_image, get_location_distribution,
     get_bedroom_distribution, get_lead_status_summary,
-    get_recent_properties, get_recent_leads,
+    get_recent_properties, get_recent_leads, get_due_follow_ups,
 )
 from services.groq_service import get_ai_response
 from seed_data import seed
 
 app = Flask(__name__)
 app.secret_key = "property-crm-secret-key-change-me"
+
+# Canonical lead sources offered by the lead form. The Source filter always
+# shows these (plus any extra values already stored on leads).
+LEAD_SOURCES = ("Website", "Referral", "Social Media", "Walk-in", "Other")
 
 # --- image upload settings ---
 ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
@@ -87,6 +92,8 @@ def dashboard():
     lead_summary = get_lead_status_summary()
     properties = get_recent_properties(6)
     leads = get_recent_leads(5)
+    due_follow_ups = get_due_follow_ups(6)
+    today = datetime.now().strftime("%Y-%m-%d")
     return render_template(
         "dashboard.html",
         stats=stats,
@@ -95,6 +102,8 @@ def dashboard():
         lead_summary=lead_summary,
         properties=properties,
         leads=leads,
+        due_follow_ups=due_follow_ups,
+        today=today,
     )
 
 
@@ -277,7 +286,13 @@ def delete_property_image_page(property_id, image_id):
 def leads_page():
     status = request.args.get("status", "")
     q = request.args.get("q", "")
+    source = request.args.get("source", "")
+    follow_up = request.args.get("follow_up", "")
+    min_score = request.args.get("min_score", "")
+    min_budget = request.args.get("min_budget", "")
+    max_budget = request.args.get("max_budget", "")
     items = get_all_leads()
+    today = datetime.now().strftime("%Y-%m-%d")
 
     if status:
         items = [l for l in items if l["status"] == status]
@@ -289,7 +304,62 @@ def leads_page():
             or ql in (l["phone"] or "")
         ]
 
-    return render_template("leads.html", leads=items, status=status, q=q)
+    if source:
+        items = [l for l in items if (l.get("lead_source") or "") == source]
+
+    if follow_up:
+        def follow_up_state(date_str):
+            if not date_str:
+                return "none"
+            if date_str < today:
+                return "overdue"
+            if date_str == today:
+                return "today"
+            return "upcoming"
+        items = [
+            l for l in items if follow_up_state(l.get("next_follow_up")) == follow_up
+        ]
+
+    if min_score:
+        try:
+            min_score_val = int(min_score)
+        except ValueError:
+            min_score_val = None
+        if min_score_val is not None:
+            items = [l for l in items if (l.get("lead_score") or 0) >= min_score_val]
+
+    try:
+        min_budget_val = float(min_budget) if min_budget else None
+    except ValueError:
+        min_budget_val = None
+    try:
+        max_budget_val = float(max_budget) if max_budget else None
+    except ValueError:
+        max_budget_val = None
+    if min_budget_val is not None:
+        items = [l for l in items if l.get("budget") is not None and l["budget"] >= min_budget_val]
+    if max_budget_val is not None:
+        items = [l for l in items if l.get("budget") is not None and l["budget"] <= max_budget_val]
+
+    used_sources = {
+        (l.get("lead_source") or "").strip() for l in get_all_leads()
+        if (l.get("lead_source") or "").strip()
+    }
+    sources = list(LEAD_SOURCES) + sorted(used_sources - set(LEAD_SOURCES))
+
+    return render_template(
+        "leads.html",
+        leads=items,
+        status=status,
+        q=q,
+        source=source,
+        follow_up=follow_up,
+        min_score=min_score,
+        min_budget=min_budget,
+        max_budget=max_budget,
+        sources=sources,
+        today=today,
+    )
 
 
 @app.route("/leads/new", methods=["GET", "POST"])
@@ -331,6 +401,29 @@ def edit_lead_page(lead_id):
 def delete_lead_page(lead_id):
     delete_lead(lead_id)
     flash("Lead deleted.", "info")
+    return redirect(url_for("leads_page"))
+
+
+@app.route("/leads/<int:lead_id>/status", methods=["POST"])
+def update_lead_status_page(lead_id):
+    """Inline quick-status dropdown — reuses the normal update_lead() logic.
+
+    Only the five real pipeline statuses are accepted, so no invalid stage
+    can ever be written. The score is recomputed from the full lead again.
+    """
+    lead = get_lead(lead_id)
+    if not lead:
+        flash("Lead not found.", "error")
+        return redirect(url_for("leads_page"))
+
+    new_status = request.form.get("status", "")
+    if new_status in ("New", "Contacted", "Qualified", "Closed", "Lost"):
+        lead["status"] = new_status
+        update_lead(lead_id, lead)
+        flash(f"{lead['client_name']} moved to {new_status}.", "info")
+    else:
+        flash("Invalid status — nothing changed.", "error")
+
     return redirect(url_for("leads_page"))
 
 

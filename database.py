@@ -28,6 +28,11 @@ LEAD_COLUMN_MIGRATION = {
     "preferred_location": "TEXT",
     "bedrooms_needed": "INTEGER",
     "notes": "TEXT",
+    "lead_source": "TEXT",
+    "assigned_to": "TEXT",
+    "next_follow_up": "TEXT",
+    "last_contact": "TEXT",
+    "lead_score": "INTEGER DEFAULT 0",
 }
 
 VALID_STATUSES = ("Available", "Sold", "Rented")
@@ -58,6 +63,42 @@ def _optional_int(value, field_label):
 
 def _valid_status(value):
     return value if value in VALID_STATUSES else "Available"
+
+
+LEAD_STATUSES = ("New", "Contacted", "Qualified", "Closed", "Lost")
+
+# Transparent lead-scoring rules. Only real, present information earns points.
+SCORING_RULES = (
+    ("budget recorded", 25, lambda d: d.get("budget") not in (None, "")),
+    ("high budget (>= 20M)", 15, lambda d: d.get("budget") not in (None, "") and float(d.get("budget") or 0) >= 20000000),
+    ("preferred location", 15, lambda d: bool((d.get("preferred_location") or "").strip())),
+    ("bedrooms needed", 15, lambda d: d.get("bedrooms_needed") not in (None, "")),
+    ("phone and email", 10, lambda d: bool((d.get("phone") or "").strip()) and bool((d.get("email") or "").strip())),
+    ("wants swimming pool", 5, lambda d: d.get("needs_swimming_pool") == "Yes"),
+    ("wants nearby metro", 5, lambda d: d.get("needs_nearby_metro") == "Yes"),
+    ("qualified status", 10, lambda d: d.get("status") == "Qualified"),
+    ("contacted status", 5, lambda d: d.get("status") == "Contacted"),
+    ("closed status", 10, lambda d: d.get("status") == "Closed"),
+)
+
+
+def _lead_score(data):
+    """Calculate 0-100 from real lead info. Never invents data; caps at 100."""
+    total = 0
+    for label, points, rule in SCORING_RULES:
+        try:
+            if rule(data):
+                total += points
+        except (TypeError, ValueError):
+            continue
+    return max(0, min(100, total))
+
+
+def _optional_date(value):
+    """Empty → None, otherwise a trimmed date string (browser sends YYYY-MM-DD)."""
+    if value in (None, ""):
+        return None
+    return str(value).strip()
 
 
 def get_connection():
@@ -105,6 +146,11 @@ def init_db():
             needs_nearby_metro TEXT DEFAULT 'No',
             status TEXT DEFAULT 'New',
             notes TEXT,
+            lead_source TEXT,
+            assigned_to TEXT,
+            next_follow_up TEXT,
+            last_contact TEXT,
+            lead_score INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now'))
         )
         """
@@ -309,8 +355,9 @@ def add_lead(data):
             """
             INSERT INTO leads
                 (client_name, phone, email, budget, preferred_location, bedrooms_needed,
-                 needs_swimming_pool, needs_nearby_metro, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 needs_swimming_pool, needs_nearby_metro, status, notes,
+                 lead_source, assigned_to, next_follow_up, last_contact, lead_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 data["client_name"],
@@ -323,6 +370,11 @@ def add_lead(data):
                 _yn(data.get("needs_nearby_metro")),
                 data.get("status", "New"),
                 data.get("notes", ""),
+                data.get("lead_source", "") or None,
+                data.get("assigned_to", "") or None,
+                _optional_date(data.get("next_follow_up")),
+                _optional_date(data.get("last_contact")),
+                _lead_score(data),
             ),
         )
         conn.commit()
@@ -339,7 +391,8 @@ def update_lead(lead_id, data):
             UPDATE leads
             SET client_name=?, phone=?, email=?, budget=?, preferred_location=?,
                 bedrooms_needed=?, needs_swimming_pool=?, needs_nearby_metro=?,
-                status=?, notes=?
+                status=?, notes=?, lead_source=?, assigned_to=?, next_follow_up=?,
+                last_contact=?, lead_score=?
             WHERE id=?
             """,
             (
@@ -353,6 +406,11 @@ def update_lead(lead_id, data):
                 _yn(data.get("needs_nearby_metro")),
                 data.get("status", "New"),
                 data.get("notes", ""),
+                data.get("lead_source", "") or None,
+                data.get("assigned_to", "") or None,
+                _optional_date(data.get("next_follow_up")),
+                _optional_date(data.get("last_contact")),
+                _lead_score(data),
                 lead_id,
             ),
         )
@@ -499,6 +557,28 @@ def get_recent_leads(limit=5):
     conn = get_connection()
     rows = conn.execute(
         "SELECT * FROM leads ORDER BY id DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_due_follow_ups(limit=6):
+    """Leads with a scheduled follow-up that is today or already past (overdue).
+
+    Comparison uses date('now') so only the date part matters; the stored
+    format is YYYY-MM-DD. Oldest follow-ups are shown first.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT * FROM leads
+        WHERE next_follow_up IS NOT NULL
+          AND TRIM(next_follow_up) <> ''
+          AND next_follow_up <= date('now')
+        ORDER BY next_follow_up ASC, id DESC
+        LIMIT ?
+        """,
+        (limit,),
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]

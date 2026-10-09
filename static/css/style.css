@@ -594,6 +594,30 @@ code {
 .badge-qualified { background: var(--purple-soft); color: #6d28d9; border-color: #ddd6fe; }
 .badge-closed { background: var(--green-soft); color: #15803d; border-color: #bbf7d0; }
 .badge-lost { background: var(--red-soft); color: #b91c1c; border-color: #fecaca; }
+.badge-overdue { background: var(--red-soft); color: #b91c1c; border-color: #fecaca; }
+.badge-today { background: var(--amber-soft); color: #b45309; border-color: #fde68a; }
+
+/* Lead score pills (auto-calculated 0-100) */
+.score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.9rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+.score-high { background: var(--green-soft); color: #15803d; border-color: #bbf7d0; }
+.score-mid { background: var(--amber-soft); color: #b45309; border-color: #fde68a; }
+.score-low { background: var(--red-soft); color: #b91c1c; border-color: #fecaca; }
+
+/* Inline quick-status dropdown on the leads table */
+.status-cell { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.status-quick-form { display: inline-flex; }
+.status-quick { width: auto; min-width: 0; padding: 0.2rem 0.4rem; font-size: 0.72rem; }
 
 /* =========================================================
    TOOLBAR / FILTERS
@@ -1462,6 +1486,7 @@ a.stat-card:hover { text-decoration: none; }
     .donut { width: 150px; height: 150px; }
     .stat-value.is-currency { font-size: 1.1rem; }
 }
+
 /* =========================================================
    PROPERTY GRID — YouTube-style thumbnail card grid
    ========================================================= */

@@ -5,20 +5,40 @@
 
 {% block content %}
 <div class="toolbar">
-    <form method="get" class="filter-panel">
+    <form method="get" class="filter-panel" id="leadFilterForm">
         <div class="filter-panel-title">🔎 Find a Lead</div>
-        <div class="filter-form">
-            <input type="text" name="q" placeholder="Search name, email, phone…" value="{{ q or '' }}" class="input" />
-            <select name="status" class="input select">
-                <option value="" {{ 'selected' if not status }}>All Statuses</option>
+        <div class="filter-grid">
+            <input type="text" name="q" class="input" placeholder="🔍 Search name, email, phone…"
+                   value="{{ q or '' }}" aria-label="Search leads" />
+            <select name="status" class="input select" aria-label="Status">
+                <option value="" {{ 'selected' if not status }}>Any Status</option>
                 {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
                     <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-            {% if q or status %}
-                <a href="{{ url_for('leads_page') }}" class="btn btn-ghost btn-sm">Clear</a>
-            {% endif %}
+            <select name="source" class="input select" aria-label="Lead Source">
+                <option value="" {{ 'selected' if not source }}>Any Source</option>
+                {% for s in sources %}
+                    <option value="{{ s }}" {{ 'selected' if source == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <select name="follow_up" class="input select" aria-label="Follow-up">
+                <option value="" {{ 'selected' if not follow_up }}>Follow-up: Any</option>
+                <option value="overdue" {{ 'selected' if follow_up == 'overdue' }}>Follow-up: Overdue</option>
+                <option value="today" {{ 'selected' if follow_up == 'today' }}>Follow-up: Due Today</option>
+                <option value="upcoming" {{ 'selected' if follow_up == 'upcoming' }}>Follow-up: Upcoming</option>
+            </select>
+            <input type="number" name="min_score" class="input" placeholder="Min score (0-100)" min="0" max="100"
+                   value="{{ min_score or '' }}" aria-label="Minimum lead score" />
+            <input type="number" name="min_budget" class="input" placeholder="Min budget ₹" min="0"
+                   value="{{ min_budget or '' }}" aria-label="Minimum budget" />
+            <input type="number" name="max_budget" class="input" placeholder="Max budget ₹" min="0"
+                   value="{{ max_budget or '' }}" aria-label="Maximum budget" />
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
+            <a href="{{ url_for('leads_page') }}" class="btn btn-ghost btn-sm">Clear all</a>
+            <span class="filter-count">{{ leads|length }} lead{{ '' if leads|length == 1 else 's' }}</span>
         </div>
     </form>
     <a href="{{ url_for('add_lead_page') }}" class="btn btn-primary">➕ Add Lead</a>
@@ -39,9 +59,11 @@
                     <th>Email</th>
                     <th>Budget</th>
                     <th>Preferred Location</th>
-                    <th>Beds Needed</th>
-                    <th>Pool</th>
-                    <th>Metro</th>
+                    <th>Beds</th>
+                    <th>Source</th>
+                    <th>Assigned To</th>
+                    <th>Score</th>
+                    <th>Follow-up</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -60,9 +82,41 @@
                     <td class="price">{% if l.budget %}₹{{ "{:,.0f}".format(l.budget) }}{% else %}—{% endif %}</td>
                     <td>{{ l.preferred_location or '—' }}</td>
                     <td>{{ l.bedrooms_needed or '—' }}</td>
-                    <td>{{ '✅' if l.needs_swimming_pool == 'Yes' else '—' }}</td>
-                    <td>{{ '✅' if l.needs_nearby_metro == 'Yes' else '—' }}</td>
-                    <td><span class="badge badge-{{ l.status|lower|replace(' ', '-') }}">{{ l.status }}</span></td>
+                    <td>{{ l.lead_source or '—' }}</td>
+                    <td>{{ l.assigned_to or '—' }}</td>
+                    <td>
+                        <span class="score-pill score-{{ 'high' if (l.lead_score or 0) >= 70 else ('mid' if (l.lead_score or 0) >= 40 else 'low') }}">
+                            {{ l.lead_score or 0 }}
+                        </span>
+                    </td>
+                    <td>
+                        {% set fud = l.next_follow_up or '' %}
+                        {% if fud %}
+                            {% if fud < today %}
+                                <span class="badge badge-overdue">Overdue · {{ fud }}</span>
+                            {% elif fud == today %}
+                                <span class="badge badge-today">Due Today</span>
+                            {% else %}
+                                <span class="muted">{{ fud }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="status-cell">
+                            <span class="badge badge-{{ l.status|lower }}">{{ l.status }}</span>
+                            <form method="post" action="{{ url_for('update_lead_status_page', lead_id=l.id) }}"
+                                  class="inline-form status-quick-form">
+                                <select name="status" class="input select status-quick" aria-label="Change status"
+                                        onchange="this.form.submit()">
+                                    {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
+                                        <option value="{{ s }}" {{ 'selected' if l.status == s }}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+                    </td>
                     <td class="actions-cell">
                         <a href="{{ url_for('edit_lead_page', lead_id=l.id) }}" class="btn btn-ghost btn-xs">Edit</a>
                         <form method="post" action="{{ url_for('delete_lead_page', lead_id=l.id) }}"
