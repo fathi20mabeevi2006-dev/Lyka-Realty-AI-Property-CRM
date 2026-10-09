@@ -4,9 +4,9 @@
 {% block page_subtitle %}Your property business at a glance{% endblock %}
 
 {% block content %}
-<!-- ===== STAT CARDS ===== -->
+<!-- ===== KPI CARDS ===== -->
 <section class="stat-grid">
-    <div class="stat-card stat-blue">
+    <a href="{{ url_for('properties_page') }}" class="stat-card stat-blue">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 21V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v15"></path>
@@ -16,12 +16,13 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value">{{ stats.total_properties }}</span>
+            <span class="stat-value">{{ "{:,}".format(stats.total_properties) }}</span>
             <span class="stat-label">Total Properties</span>
+            <span class="stat-sub">All listings on record</span>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card stat-green">
+    <a href="{{ url_for('properties_page', status='Available') }}" class="stat-card stat-green">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"></circle>
@@ -29,12 +30,13 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value">{{ stats.available }}</span>
+            <span class="stat-value">{{ "{:,}".format(stats.available) }}</span>
             <span class="stat-label">Available</span>
+            <span class="stat-sub">Ready to sell or rent</span>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card stat-red">
+    <a href="{{ url_for('properties_page', status='Sold') }}" class="stat-card stat-red">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 2.8 12V4.8A2 2 0 0 1 4.8 2.8H12a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.8Z"></path>
@@ -42,12 +44,13 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value">{{ stats.sold }}</span>
+            <span class="stat-value">{{ "{:,}".format(stats.sold) }}</span>
             <span class="stat-label">Sold</span>
+            <span class="stat-sub">Closed sales</span>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card stat-amber">
+    <a href="{{ url_for('properties_page', status='Rented') }}" class="stat-card stat-amber">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="7.5" cy="15.5" r="3.5"></circle>
@@ -57,12 +60,13 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value">{{ stats.rented }}</span>
+            <span class="stat-value">{{ "{:,}".format(stats.rented) }}</span>
             <span class="stat-label">Rented</span>
+            <span class="stat-sub">Currently leased</span>
         </div>
-    </div>
+    </a>
 
-    <div class="stat-card stat-purple">
+    <a href="{{ url_for('leads_page') }}" class="stat-card stat-purple">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="9" cy="8" r="3.2"></circle>
@@ -72,8 +76,37 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value">{{ stats.total_leads }}</span>
+            <span class="stat-value">{{ "{:,}".format(stats.total_leads) }}</span>
             <span class="stat-label">Total Leads</span>
+            <span class="stat-sub">Prospects in pipeline</span>
+        </div>
+    </a>
+
+    <div class="stat-card stat-gold">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20"></path>
+                <path d="M17 6.5c0-1.7-2.2-3-5-3s-5 1.3-5 3 1.6 2.4 5 3 5 1.5 5 3-2.2 3-5 3-5-1.3-5-3"></path>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <span class="stat-value is-currency">₹{{ "{:,.0f}".format(stats.portfolio_value) }}</span>
+            <span class="stat-label">Portfolio Value</span>
+            <span class="stat-sub">Sum of listed prices ({{ "{:,}".format(stats.priced_count) }} listings)</span>
+        </div>
+    </div>
+
+    <div class="stat-card stat-gold">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 17l6-6 4 4 7-7"></path>
+                <path d="M14 8h6v6"></path>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <span class="stat-value is-currency">₹{{ "{:,.0f}".format(stats.average_price) }}</span>
+            <span class="stat-label">Average Property Price</span>
+            <span class="stat-sub">Mean listed price of the same {{ "{:,}".format(stats.priced_count) }} listings</span>
         </div>
     </div>
 </section>
@@ -85,11 +118,164 @@
         <a href="{{ url_for('add_property_page') }}" class="action-btn action-primary">➕ Add Property</a>
         <a href="{{ url_for('add_lead_page') }}" class="action-btn action-secondary">👤 Add Lead</a>
         <a href="{{ url_for('assistant_page') }}" class="action-btn action-ai">🤖 Ask the AI</a>
+        <a href="{{ url_for('properties_page') }}" class="action-btn action-secondary">🏢 Browse Properties</a>
+        <a href="{{ url_for('leads_page') }}" class="action-btn action-secondary">📋 View Leads</a>
     </div>
 </section>
 
+<!-- ===== CHARTS ROW 1: LOCATIONS + STATUS DONUT ===== -->
 <div class="two-col">
-    <!-- ===== RECENT PROPERTIES ===== -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Properties by Location</h2>
+            <span class="muted">{{ "{:,}".format(location_distribution|length) }} area{{ '' if location_distribution|length == 1 else 's' }}</span>
+        </div>
+        <div class="panel-body">
+            {% if location_distribution %}
+                {% set loc_max = location_distribution|map(attribute='count')|max %}
+                <div class="bar-list">
+                    {% for item in location_distribution %}
+                    <div class="bar-row">
+                        <span class="bar-label" title="{{ item.location }}">{{ item.location }}</span>
+                        <span class="bar-track">
+                            <span class="bar-fill" style="width: {{ (item.count / loc_max * 100) if loc_max else 0 }}%;"></span>
+                        </span>
+                        <span class="bar-value">{{ "{:,}".format(item.count) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state">No property locations yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Property Status</h2>
+            <span class="muted">{{ "{:,}".format(stats.total_properties) }} total</span>
+        </div>
+        <div class="panel-body">
+            {% set status_meta = [
+                ('Available', 'var(--green)'),
+                ('Sold', 'var(--red)'),
+                ('Rented', 'var(--amber)')
+            ] %}
+            {% set circumference = 339.292 %}
+            <div class="donut-wrap">
+                <svg class="donut" viewBox="0 0 140 140" role="img"
+                     aria-label="Property status distribution: {{ "{:,}".format(stats.available) }} available, {{ "{:,}".format(stats.sold) }} sold, {{ "{:,}".format(stats.rented) }} rented">
+                    <circle cx="70" cy="70" r="54" fill="none" stroke="var(--surface-3)" stroke-width="18"></circle>
+                    {% if stats.total_properties %}
+                        {% set ns = namespace(offset=0) %}
+                        {% for label, color in status_meta %}
+                            {% set count = stats.status_counts.get(label, 0) %}
+                            {% if count %}
+                                {% set segment = circumference * count / stats.total_properties %}
+                                <circle cx="70" cy="70" r="54" fill="none" stroke="{{ color }}" stroke-width="18"
+                                        stroke-dasharray="{{ segment }} {{ circumference - segment }}"
+                                        stroke-dashoffset="{{ -ns.offset }}"
+                                        transform="rotate(-90 70 70)"></circle>
+                                {% set ns.offset = ns.offset + segment %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    <text x="70" y="68" text-anchor="middle" class="donut-total">{{ "{:,}".format(stats.total_properties) }}</text>
+                    <text x="70" y="86" text-anchor="middle" class="donut-cap">Listings</text>
+                </svg>
+                <div class="donut-legend">
+                    {% for label, color in status_meta %}
+                        {% set count = stats.status_counts.get(label, 0) %}
+                        {% set pct = (count / stats.total_properties * 100) if stats.total_properties else 0 %}
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background: {{ color }};"></span>
+                            <span class="legend-name">{{ label }}</span>
+                            <span class="legend-val">{{ "{:,}".format(count) }} · {{ "{:.0f}".format(pct) }}%</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- ===== CHARTS ROW 2: BEDROOMS + LEAD PIPELINE ===== -->
+<div class="two-col">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Properties by Bedrooms</h2>
+            <span class="muted">{{ "{:,}".format(bedroom_distribution|length) }} size{{ '' if bedroom_distribution|length == 1 else 's' }}</span>
+        </div>
+        <div class="panel-body">
+            {% if bedroom_distribution %}
+                {% set bed_max = bedroom_distribution|map(attribute='count')|max %}
+                <div class="bar-list">
+                    {% for item in bedroom_distribution %}
+                    <div class="bar-row">
+                        <span class="bar-label">{{ item.bedrooms }} bed{{ '' if item.bedrooms == 1 else 's' }}</span>
+                        <span class="bar-track">
+                            <span class="bar-fill fill-gold" style="width: {{ (item.count / bed_max * 100) if bed_max else 0 }}%;"></span>
+                        </span>
+                        <span class="bar-value">{{ "{:,}".format(item.count) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="empty-state">No bedroom data yet.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Lead Pipeline</h2>
+            <span class="muted">{{ "{:,}".format(lead_summary.total) }} lead{{ '' if lead_summary.total == 1 else 's' }}</span>
+        </div>
+        <div class="panel-body">
+            <div class="pipeline-grid">
+                {% for status, count in lead_summary.by_status.items() %}
+                <div class="pipeline-card">
+                    <span class="pipeline-num">{{ "{:,}".format(count) }}</span>
+                    <span class="pipeline-label">
+                        <span class="badge badge-{{ status|lower|replace(' ', '-') }}">{{ status }}</span>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="bar-list">
+                {% for status, count in lead_summary.by_status.items() %}
+                <div class="bar-row">
+                    <span class="bar-label">{{ status }}</span>
+                    <span class="bar-track">
+                        <span class="bar-fill fill-purple" style="width: {{ (count / lead_summary.max_status * 100) if lead_summary.max_status else 0 }}%;"></span>
+                    </span>
+                    <span class="bar-value">{{ "{:,}".format(count) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="summary-block">
+                <div class="summary-line">
+                    <span>Total pipeline budget</span>
+                    <strong>₹{{ "{:,.0f}".format(lead_summary.total_budget) }}</strong>
+                </div>
+                <div class="summary-line">
+                    <span>Average lead budget</span>
+                    <strong>₹{{ "{:,.0f}".format(lead_summary.average_budget) }}</strong>
+                </div>
+                <div class="summary-line">
+                    <span>Closed conversion</span>
+                    <strong>{{ "{:,}".format(lead_summary.by_status.get('Closed', 0)) }} / {{ "{:,}".format(lead_summary.total) }} ({{ "{:.0f}".format((lead_summary.by_status.get('Closed', 0) / lead_summary.total * 100) if lead_summary.total else 0) }}%)</strong>
+                </div>
+                <p class="muted small">Based on {{ "{:,}".format(lead_summary.budgeted_count) }} lead{{ '' if lead_summary.budgeted_count == 1 else 's' }} with a recorded budget.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- ===== RECENT LISTS ===== -->
+<div class="two-col">
     <section class="panel">
         <div class="panel-header">
             <h2>Recent Properties</h2>
@@ -119,7 +305,6 @@
         </div>
     </section>
 
-    <!-- ===== RECENT LEADS ===== -->
     <section class="panel">
         <div class="panel-header">
             <h2>Recent Leads</h2>
@@ -136,6 +321,9 @@
                     </div>
                     <div class="mini-meta">
                         <span class="badge badge-{{ l.status|lower|replace(' ', '-') }}">{{ l.status }}</span>
+                        {% if l.budget %}
+                        <span class="price">₹{{ "{:,.0f}".format(l.budget) }}</span>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}

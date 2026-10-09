@@ -21,7 +21,9 @@ from database import (
     update_property, delete_property, get_all_leads, get_lead,
     add_lead, update_lead, delete_lead, get_dashboard_stats,
     add_property_images, get_property_images, get_property_image,
-    delete_property_image,
+    delete_property_image, get_location_distribution,
+    get_bedroom_distribution, get_lead_status_summary,
+    get_recent_properties, get_recent_leads,
 )
 from services.groq_service import get_ai_response
 from seed_data import seed
@@ -80,11 +82,17 @@ init_db()
 @app.route("/")
 def dashboard():
     stats = get_dashboard_stats()
-    properties = get_all_properties()[:6]
-    leads = get_all_leads()[:5]
+    location_distribution = get_location_distribution()
+    bedroom_distribution = get_bedroom_distribution()
+    lead_summary = get_lead_status_summary()
+    properties = get_recent_properties(6)
+    leads = get_recent_leads(5)
     return render_template(
         "dashboard.html",
         stats=stats,
+        location_distribution=location_distribution,
+        bedroom_distribution=bedroom_distribution,
+        lead_summary=lead_summary,
         properties=properties,
         leads=leads,
     )

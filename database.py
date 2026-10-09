@@ -371,19 +371,134 @@ def delete_lead(lead_id):
 # ---------------------- DASHBOARD STATS ----------------------
 
 def get_dashboard_stats():
+    """Read-only headline counts plus safe price totals (never raises on empty DB)."""
     conn = get_connection()
-    stats = {
-        "total_properties": conn.execute("SELECT COUNT(*) FROM properties").fetchone()[0],
-        "available": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Available'"
-        ).fetchone()[0],
-        "sold": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Sold'"
-        ).fetchone()[0],
-        "rented": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Rented'"
-        ).fetchone()[0],
-        "total_leads": conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0],
-    }
+
+    status_counts = {s: 0 for s in VALID_STATUSES}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM properties GROUP BY status"):
+        status_counts[row["status"]] = row["n"]
+
+    price_row = conn.execute(
+        """
+        SELECT
+            COUNT(price)             AS priced_count,
+            COALESCE(SUM(price), 0)  AS portfolio_value,
+            COALESCE(AVG(price), 0)  AS average_price
+        FROM properties
+        WHERE price IS NOT NULL
+        """
+    ).fetchone()
+
+    total_leads = conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
     conn.close()
-    return stats
+
+    return {
+        "total_properties": sum(status_counts.values()),
+        "available": status_counts.get("Available", 0),
+        "sold": status_counts.get("Sold", 0),
+        "rented": status_counts.get("Rented", 0),
+        "total_leads": total_leads,
+        "status_counts": status_counts,
+        "priced_count": price_row["priced_count"] or 0,
+        "portfolio_value": price_row["portfolio_value"] or 0,
+        "average_price": price_row["average_price"] or 0,
+    }
+
+
+def get_location_distribution(limit=8):
+    """Top locations by listing count. Extra locations are bundled into 'Other'."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT location, COUNT(*) AS n
+        FROM properties
+        WHERE location IS NOT NULL AND TRIM(location) <> ''
+        GROUP BY location
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    conn.close()
+
+    items = [{"location": r["location"], "count": r["n"]} for r in rows]
+    if len(items) > limit:
+        top = items[:limit]
+        other = sum(i["count"] for i in items[limit:])
+        if other:
+            top.append({"location": "Other", "count": other})
+        items = top
+    return items
+
+
+def get_bedroom_distribution():
+    """Listing count per bedroom number, in ascending bedroom order."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT bedrooms, COUNT(*) AS n
+        FROM properties
+        GROUP BY bedrooms
+        ORDER BY bedrooms
+        """
+    ).fetchall()
+    conn.close()
+    return [{"bedrooms": r["bedrooms"], "count": r["n"]} for r in rows]
+
+
+def get_lead_status_summary():
+    """Lead counts per status plus safe budget totals (never raises on empty DB)."""
+    known = ("New", "Contacted", "Qualified", "Closed", "Lost")
+    conn = get_connection()
+
+    by_status = {s: 0 for s in known}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM leads GROUP BY status"):
+        by_status[row["status"]] = row["n"]
+
+    budget_row = conn.execute(
+        """
+        SELECT
+            COUNT(budget)             AS budgeted_count,
+            COALESCE(SUM(budget), 0)  AS total_budget,
+            COALESCE(AVG(budget), 0)  AS average_budget
+        FROM leads
+        WHERE budget IS NOT NULL
+        """
+    ).fetchone()
+    conn.close()
+
+    return {
+        "total": sum(by_status.values()),
+        "by_status": by_status,
+        "max_status": max(by_status.values()) if by_status else 0,
+        "budgeted_count": budget_row["budgeted_count"] or 0,
+        "total_budget": budget_row["total_budget"] or 0,
+        "average_budget": budget_row["average_budget"] or 0,
+    }
+
+
+def get_recent_properties(limit=6):
+    """Newest listings (with first image thumbnail) using a real LIMIT query."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT p.*,
+            (SELECT filename FROM property_images i
+             WHERE i.property_id = p.id
+             ORDER BY i.id LIMIT 1) AS thumbnail
+        FROM properties p
+        ORDER BY p.id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_recent_leads(limit=5):
+    """Newest leads using a real LIMIT query."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM leads ORDER BY id DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

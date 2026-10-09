@@ -1344,3 +1344,121 @@ textarea.input { resize: vertical; line-height: 1.55; }
     .gallery-item:hover,
     .nav-item:hover { transform: none; }
 }
+
+/* =========================================================
+   ADVANCED DASHBOARD
+   ========================================================= */
+
+/* ---------- KPI cards: clickable + sub label ---------- */
+a.stat-card { color: inherit; text-decoration: none; }
+a.stat-card:hover { text-decoration: none; }
+.stat-sub {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-top: 0.15rem;
+}
+.stat-value.is-currency { font-size: 1.28rem; letter-spacing: -0.02em; }
+
+/* ---------- Horizontal bar charts ---------- */
+.bar-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.bar-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 34%) 1fr auto;
+    align-items: center;
+    gap: 0.65rem;
+}
+.bar-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bar-track {
+    display: block;
+    background: var(--surface-3);
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+}
+.bar-fill {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    transition: width 0.4s ease;
+}
+.bar-fill.fill-gold { background: linear-gradient(90deg, var(--gold), var(--gold-dark)); }
+.bar-fill.fill-purple { background: linear-gradient(90deg, #a78bfa, var(--purple)); }
+.bar-value {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    min-width: 2.4rem;
+    text-align: right;
+}
+
+/* ---------- SVG donut ---------- */
+.donut-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+}
+.donut { width: 180px; height: 180px; flex-shrink: 0; }
+.donut-total { font-size: 30px; font-weight: 800; fill: var(--text); }
+.donut-cap { font-size: 12px; font-weight: 700; fill: var(--text-muted); }
+.donut-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    min-width: 150px;
+    flex: 1;
+}
+.legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+.legend-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.legend-name { font-weight: 600; }
+.legend-val { margin-left: auto; font-weight: 800; color: var(--text-muted); }
+
+/* ---------- Lead pipeline summary ---------- */
+.pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 1.1rem;
+}
+.pipeline-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    padding: 0.8rem 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+.pipeline-num { font-size: 1.35rem; font-weight: 800; line-height: 1; }
+.pipeline-label .badge { pointer-events: none; }
+.summary-block { margin-top: 1.15rem; }
+.summary-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.86rem;
+    color: var(--text-muted);
+}
+.summary-line:last-of-type { border-bottom: none; }
+.summary-line strong { font-weight: 800; color: var(--text); }
+
+@media (max-width: 640px) {
+    .bar-row { grid-template-columns: 1fr auto; }
+    .bar-track { grid-column: 1 / -1; }
+    .bar-value { min-width: 0; }
+    .donut { width: 150px; height: 150px; }
+    .stat-value.is-currency { font-size: 1.1rem; }
+}
