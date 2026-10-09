@@ -8,6 +8,9 @@
     <div class="panel-body">
         <form method="post" class="crm-form">
             <div class="form-grid">
+
+                <div class="form-section-title span-2">Client Details</div>
+
                 <div class="form-group span-2">
                     <label for="client_name">Client Name <span class="req">*</span></label>
                     <input type="text" id="client_name" name="client_name" class="input"
@@ -28,6 +31,8 @@
                            value="{{ lead.email if lead else '' }}"
                            placeholder="e.g. client@email.com" />
                 </div>
+
+                <div class="form-section-title span-2">Requirements</div>
 
                 <div class="form-group">
                     <label for="budget">Budget (₹)</label>

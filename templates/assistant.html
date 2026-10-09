@@ -12,16 +12,13 @@ Smart property search, analytics and CRM insights
 
 <div class="chat-layout">
 
-    <!-- CHAT AREA -->
-
+    <!-- ===== CHAT AREA ===== -->
     <div class="panel chat-panel">
 
         <div class="chat-header">
             <div class="chat-avatar">🤖</div>
-
             <div>
                 <h2>Lyka Realty AI Assistant</h2>
-
                 <div class="chat-status">
                     <span class="status-dot"></span>
                     Connected to Live CRM Database
@@ -31,26 +28,15 @@ Smart property search, analytics and CRM insights
 
         <div id="chatMessages" class="chat-messages">
 
-            <div class="message">
-
-                <div class="message-avatar">
-                    🤖
-                </div>
-
+            <div class="message assistant-message">
+                <div class="message-avatar">🤖</div>
                 <div class="message-content">
-
                     <h3>Welcome to Lyka Realty AI</h3>
-
                     <p>
-                        I can search properties, count leads,
-                        provide dashboard statistics and answer
-                        questions directly from your CRM database.
+                        I can search properties, count leads, provide dashboard
+                        statistics and answer questions directly from your CRM database.
                     </p>
-
-                    <br>
-
                     <strong>Try asking:</strong>
-
                     <ul>
                         <li>Dashboard stats</li>
                         <li>How many leads?</li>
@@ -58,127 +44,93 @@ Smart property search, analytics and CRM insights
                         <li>Cheapest property</li>
                         <li>Most expensive property</li>
                     </ul>
-
                 </div>
-
             </div>
 
         </div>
 
         <form id="chatForm" class="chat-input-bar">
-
-    <input
-        type="text"
-        id="chatInput"
-        class="input chat-input"
-        placeholder="Ask Lyka Realty AI..."
-    >
-
-    <button
-        type="button"
-        id="speakBtn"
-        class="btn btn-secondary"
-    >
-        🎤 Speak
-    </button>
-
-    <button
-        type="submit"
-        id="sendBtn"
-        class="btn btn-primary"
-    >
-        Ask AI
-    </button>
-
-</form>
+            <label for="chatInput" class="sr-only">Ask Lyka Realty AI</label>
+            <input
+                type="text"
+                id="chatInput"
+                class="input chat-input"
+                placeholder="Ask Lyka Realty AI..."
+                autocomplete="off"
+            >
+            <button
+                type="button"
+                id="speakBtn"
+                class="btn btn-secondary"
+                aria-label="Speak your question"
+            >
+                🎤 Speak
+            </button>
+            <button
+                type="submit"
+                id="sendBtn"
+                class="btn btn-primary"
+            >
+                Ask AI
+            </button>
+        </form>
 
     </div>
 
-    <!-- RIGHT PANEL -->
-
+    <!-- ===== RIGHT PANEL ===== -->
     <div class="panel">
 
         <div class="panel-header">
             <h2>⚡ AI Features</h2>
         </div>
 
-        <div class="panel-body">
+        <div class="panel-body chat-help">
 
             <div class="stat-grid">
-
                 <div class="stat-card stat-blue">
-                    <div class="stat-icon">🏢</div>
-
+                    <div class="stat-icon" aria-hidden="true">🏢</div>
                     <div class="stat-body">
-                        <div class="stat-label">
-                            Property Search
-                        </div>
+                        <div class="stat-label">Property Search</div>
                     </div>
                 </div>
 
                 <div class="stat-card stat-green">
-                    <div class="stat-icon">👥</div>
-
+                    <div class="stat-icon" aria-hidden="true">👥</div>
                     <div class="stat-body">
-                        <div class="stat-label">
-                            Lead Insights
-                        </div>
+                        <div class="stat-label">Lead Insights</div>
                     </div>
                 </div>
 
                 <div class="stat-card stat-purple">
-                    <div class="stat-icon">📊</div>
-
+                    <div class="stat-icon" aria-hidden="true">📊</div>
                     <div class="stat-body">
-                        <div class="stat-label">
-                            CRM Analytics
-                        </div>
+                        <div class="stat-label">CRM Analytics</div>
                     </div>
                 </div>
-
             </div>
 
             <h3>💡 Quick Questions</h3>
 
             <div class="suggestion-chips">
-
-                <button
-                    class="chip"
-                    data-question="Dashboard stats">
+                <button class="chip" data-question="Dashboard stats">
                     Dashboard stats
                 </button>
-
-                <button
-                    class="chip"
-                    data-question="How many leads?">
+                <button class="chip" data-question="How many leads?">
                     How many leads?
                 </button>
-
-                <button
-                    class="chip"
-                    data-question="Available properties">
+                <button class="chip" data-question="Available properties">
                     Available properties
                 </button>
-
-                <button
-                    class="chip"
-                    data-question="Cheapest property">
+                <button class="chip" data-question="Cheapest property">
                     Cheapest property
                 </button>
-
-                <button
-                    class="chip"
-                    data-question="Most expensive property">
+                <button class="chip" data-question="Most expensive property">
                     Most expensive property
                 </button>
-
             </div>
 
-            <br>
-
             <h3>🔥 Popular Searches</h3>
-
-            <ul>
+            <ul class="help-list">
                 <li>Properties with pool</li>
                 <li>Sea-view properties</li>
                 <li>Properties near metro</li>

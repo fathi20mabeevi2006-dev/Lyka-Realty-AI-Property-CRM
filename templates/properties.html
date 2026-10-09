@@ -6,6 +6,7 @@
 {% block content %}
 <div class="toolbar">
     <form method="get" class="filter-panel" id="filterForm">
+        <div class="filter-panel-title">🔎 Filter Listings</div>
         <div class="filter-grid">
             <input type="text" name="q" class="input" placeholder="🔍 Search name or location…"
                    value="{{ q or '' }}" aria-label="Search" />
@@ -66,6 +67,10 @@
 </div>
 
 <section class="panel">
+    <div class="panel-header">
+        <h2>Listings</h2>
+        <span class="muted">{{ properties|length }} result{{ '' if properties|length == 1 else 's' }}</span>
+    </div>
     <div class="panel-body table-wrap">
         {% if properties %}
         <table class="data-table" id="propertiesTable">

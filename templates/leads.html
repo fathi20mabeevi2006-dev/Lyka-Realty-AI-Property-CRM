@@ -5,23 +5,30 @@
 
 {% block content %}
 <div class="toolbar">
-    <form method="get" class="filter-form">
-        <input type="text" name="q" placeholder="Search name, email, phone…" value="{{ q or '' }}" class="input" />
-        <select name="status" class="input select">
-            <option value="" {{ 'selected' if not status }}>All Statuses</option>
-            {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
-                <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-        {% if q or status %}
-            <a href="{{ url_for('leads_page') }}" class="btn btn-ghost btn-sm">Clear</a>
-        {% endif %}
+    <form method="get" class="filter-panel">
+        <div class="filter-panel-title">🔎 Find a Lead</div>
+        <div class="filter-form">
+            <input type="text" name="q" placeholder="Search name, email, phone…" value="{{ q or '' }}" class="input" />
+            <select name="status" class="input select">
+                <option value="" {{ 'selected' if not status }}>All Statuses</option>
+                {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
+                    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            {% if q or status %}
+                <a href="{{ url_for('leads_page') }}" class="btn btn-ghost btn-sm">Clear</a>
+            {% endif %}
+        </div>
     </form>
     <a href="{{ url_for('add_lead_page') }}" class="btn btn-primary">➕ Add Lead</a>
 </div>
 
 <section class="panel">
+    <div class="panel-header">
+        <h2>Leads</h2>
+        <span class="muted">{{ leads|length }} result{{ '' if leads|length == 1 else 's' }}</span>
+    </div>
     <div class="panel-body table-wrap">
         {% if leads %}
         <table class="data-table">
@@ -42,7 +49,12 @@
             <tbody>
                 {% for l in leads %}
                 <tr>
-                    <td><strong>{{ l.client_name }}</strong></td>
+                    <td>
+                        <div class="name-cell">
+                            <span class="client-avatar" aria-hidden="true">{{ l.client_name[:1]|upper }}</span>
+                            <strong>{{ l.client_name }}</strong>
+                        </div>
+                    </td>
                     <td>{{ l.phone or '—' }}</td>
                     <td>{{ l.email or '—' }}</td>
                     <td class="price">{% if l.budget %}₹{{ "{:,.0f}".format(l.budget) }}{% else %}—{% endif %}</td>
