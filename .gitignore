@@ -3,3 +3,4 @@ __pycache__/
 server.log
 server_err.log
 .env
+_ui_backup/
