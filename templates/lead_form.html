@@ -80,6 +80,49 @@
                     </select>
                 </div>
 
+                <div class="form-section-title span-2">Tracking</div>
+
+                <div class="form-group">
+                    <label for="lead_source">Lead Source</label>
+                    <select id="lead_source" name="lead_source" class="input select">
+                        <option value="" {{ 'selected' if lead and not lead.lead_source }}>— Select —</option>
+                        {% for s in ['Website', 'Referral', 'Social Media', 'Walk-in', 'Other'] %}
+                            <option value="{{ s }}" {{ 'selected' if lead and lead.lead_source == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="assigned_to">Assigned To</label>
+                    <input type="text" id="assigned_to" name="assigned_to" class="input"
+                           value="{{ lead.assigned_to if lead else '' }}"
+                           placeholder="e.g. sales agent name" />
+                </div>
+
+                <div class="form-group">
+                    <label for="next_follow_up">Next Follow-up</label>
+                    <input type="date" id="next_follow_up" name="next_follow_up" class="input"
+                           value="{{ lead.next_follow_up if lead else '' }}" />
+                </div>
+
+                <div class="form-group">
+                    <label for="last_contact">Last Contact</label>
+                    <input type="date" id="last_contact" name="last_contact" class="input"
+                           value="{{ lead.last_contact if lead else '' }}" />
+                </div>
+
+                <div class="form-group">
+                    <label>Lead Score</label>
+                    <p class="muted small" style="padding-top: 0.55rem;">
+                        {% if lead %}
+                            Current score:
+                            <span class="score-pill score-{{ 'high' if lead.lead_score >= 70 else ('mid' if lead.lead_score >= 40 else 'low') }}">{{ lead.lead_score }}</span>
+                        {% else %}
+                            Automatically calculated from the details above (0–100).
+                        {% endif %}
+                    </p>
+                </div>
+
                 <div class="form-group span-2">
                     <label for="notes">Notes</label>
                     <textarea id="notes" name="notes" class="input" rows="3"

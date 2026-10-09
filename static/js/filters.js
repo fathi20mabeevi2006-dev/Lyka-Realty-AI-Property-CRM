@@ -1,17 +1,15 @@
 /* =========================================================
    filters.js — Instant property filtering on the list page
    The form still works without JS (server-side GET filter);
-   with JS, rows show/hide immediately using the same rules.
+   with JS, cards show/hide immediately using the same rules.
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("filterForm");
-    const table = document.getElementById("propertiesTable");
-    if (!form || !table) return;
+    const grid = document.getElementById("propertiesGrid");
+    if (!form || !grid) return;
 
-    const rows = Array.from(table.querySelectorAll("tbody tr")).filter(function (r) {
-        return r.id !== "filterEmpty";
-    });
+    const cards = Array.from(grid.querySelectorAll(".property-card"));
     const emptyRow = document.getElementById("filterEmpty");
     const countEl = document.getElementById("resultCount");
     const clearBtn = document.getElementById("clearFilters");
@@ -35,8 +33,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let visible = 0;
 
-        rows.forEach(function (row) {
-            const d = row.dataset;
+        cards.forEach(function (card) {
+            const d = card.dataset;
             let ok = true;
 
             if (q) {
@@ -55,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (ok && pool && d.pool !== pool) ok = false;
             if (ok && metro && d.metro !== metro) ok = false;
 
-            row.style.display = ok ? "" : "none";
+            card.style.display = ok ? "" : "none";
             if (ok) visible += 1;
         });
 
@@ -94,6 +92,29 @@ document.addEventListener("DOMContentLoaded", function () {
             applyFilters();
         });
     }
+
+    /* Clicking anywhere on a card opens the property detail page,
+       except on links/buttons/forms inside the card. */
+    grid.addEventListener("click", function (e) {
+        if (e.target.closest("a, button, form")) return;
+        const card = e.target.closest(".property-card");
+        if (!card) return;
+        const link = card.querySelector(".property-thumb");
+        if (link) window.location.href = link.getAttribute("href");
+    });
+
+    /* If a thumbnail image fails to load (uploaded photo or sample
+       illustration missing), fall back to the existing placeholder. */
+    grid.addEventListener("error", function (e) {
+        const t = e.target;
+        if (!(t instanceof HTMLImageElement)) return;
+        if (!t.classList.contains("property-thumb-img")) return;
+        const span = document.createElement("span");
+        span.className = "property-thumb-empty";
+        span.setAttribute("title", "No photo");
+        span.textContent = "🏠";
+        t.replaceWith(span);
+    }, true);
 
     /* Initial pass keeps client and server views in sync */
     applyFilters();

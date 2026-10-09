@@ -71,84 +71,72 @@
         <h2>Listings</h2>
         <span class="muted">{{ properties|length }} result{{ '' if properties|length == 1 else 's' }}</span>
     </div>
-    <div class="panel-body table-wrap">
+    <div class="panel-body">
         {% if properties %}
-        <table class="data-table" id="propertiesTable">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Location</th>
-                    <th>Price</th>
-                    <th>Bed</th>
-                    <th>Bath</th>
-                    <th>Floor</th>
-                    <th>View</th>
-                    <th>Pool</th>
-                    <th>Metro</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for p in properties %}
-                <tr data-name="{{ p.name }}"
-                    data-location="{{ p.location }}"
-                    data-price="{{ p.price }}"
-                    data-bedrooms="{{ p.bedrooms }}"
-                    data-bathrooms="{{ p.bathrooms }}"
-                    data-pool="{{ p.has_swimming_pool }}"
-                    data-metro="{{ p.nearby_metro }}"
-                    data-view="{{ p.property_view or '' }}"
-                    data-status="{{ p.status }}">
-                    <td>
-                        <div class="name-cell">
-                            {% if p.thumbnail %}
-                                <img class="row-thumb"
-                                     src="{{ url_for('static', filename='uploads/properties/' ~ p.thumbnail) }}"
-                                     alt="" loading="lazy" />
-                            {% else %}
-                                <span class="row-thumb row-thumb-empty" title="No photo">🏠</span>
-                            {% endif %}
-                            <strong>
-                                <a class="row-link" href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
-                            </strong>
-                        </div>
-                    </td>
-                    <td>{{ p.location }}</td>
-                    <td class="price">₹{{ "{:,.0f}".format(p.price) }}</td>
-                    <td>{{ p.bedrooms }}</td>
-                    <td>{{ p.bathrooms }}</td>
-                    <td>{{ 'Ground' if p.floor_number == 0 else (p.floor_number if p.floor_number is not none else '—') }}</td>
-                    <td>{{ p.property_view or '—' }}</td>
-                    <td>
-                        <span class="pill {{ 'pill-yes' if p.has_swimming_pool == 'Yes' else 'pill-no' }}">
-                            {{ 'Yes' if p.has_swimming_pool == 'Yes' else 'No' }}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="pill {{ 'pill-yes' if p.nearby_metro == 'Yes' else 'pill-no' }}">
-                            {{ 'Yes' if p.nearby_metro == 'Yes' else 'No' }}
-                        </span>
-                    </td>
-                    <td><span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span></td>
-                    <td class="actions-cell">
-                        <a href="{{ url_for('property_detail_page', property_id=p.id) }}" class="btn btn-ghost btn-xs">View</a>
-                        <a href="{{ url_for('edit_property_page', property_id=p.id) }}" class="btn btn-ghost btn-xs">Edit</a>
+        <div class="property-grid" id="propertiesGrid">
+            {% for p in properties %}
+            <article class="property-card"
+                     data-name="{{ p.name }}"
+                     data-location="{{ p.location }}"
+                     data-price="{{ p.price }}"
+                     data-bedrooms="{{ p.bedrooms }}"
+                     data-bathrooms="{{ p.bathrooms }}"
+                     data-pool="{{ p.has_swimming_pool }}"
+                     data-metro="{{ p.nearby_metro }}"
+                     data-view="{{ p.property_view or '' }}"
+                     data-status="{{ p.status }}">
+                <a class="property-thumb" href="{{ url_for('property_detail_page', property_id=p.id) }}"
+                   aria-label="View {{ p.name }}">
+                    {% if p.thumbnail %}
+                        <img class="property-thumb-img"
+                             src="{{ url_for('static', filename='uploads/properties/' ~ p.thumbnail) }}"
+                             alt="Photo of {{ p.name }}" loading="lazy" />
+                    {% else %}
+                        {% set _nm = (p.name or '')|lower %}
+                        {% set _nt = (((p.property_view or '') ~ ' ' ~ (p.location or '')) )|lower %}
+                        {% if 'villa' in _nm and 'village' not in _nm %}
+                            {% set _sample = 'sample-villa.svg' %}
+                        {% elif 'penthouse' in _nm or 'tower' in _nm or 'highrise' in _nm or 'hi-rise' in _nm %}
+                            {% set _sample = 'sample-tower.svg' %}
+                        {% elif 'beach' in _nt or 'sea' in _nt or 'marina' in _nt or 'waterfront' in _nt or 'seafront' in _nt %}
+                            {% set _sample = 'sample-beachfront.svg' %}
+                        {% else %}
+                            {% set _sample = 'sample-apartment.svg' %}
+                        {% endif %}
+                        <img class="property-thumb-img"
+                             src="{{ url_for('static', filename='img/samples/' ~ _sample) }}"
+                             alt="Sample illustration of {{ p.name }}" loading="lazy" />
+                        <span class="property-thumb-sample">Sample</span>
+                    {% endif %}
+                    <span class="property-status-badge">
+                        <span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span>
+                    </span>
+                </a>
+                <div class="property-card-body">
+                    <h3 class="property-name">
+                        <a href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
+                    </h3>
+                    <p class="property-location">📍 {{ p.location }}</p>
+                    <p class="property-price">₹{{ "{:,.0f}".format(p.price) }}</p>
+                    <div class="property-meta">
+                        <span>🛏 {{ p.bedrooms }} bed{{ '' if p.bedrooms == 1 else 's' }}</span>
+                        <span>🛁 {{ p.bathrooms }} bath{{ '' if p.bathrooms == 1 else 's' }}</span>
+                    </div>
+                    <div class="property-actions">
+                        <a href="{{ url_for('edit_property_page', property_id=p.id) }}" class="btn btn-ghost btn-xs">✏️ Edit</a>
                         <form method="post" action="{{ url_for('delete_property_page', property_id=p.id) }}"
                               onsubmit="return confirm('Delete {{ p.name }}?');" class="inline-form">
-                            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-xs">🗑 Delete</button>
                         </form>
-                    </td>
-                </tr>
-                {% endfor %}
-                <tr id="filterEmpty" class="filter-empty-row" style="display:none;">
-                    <td colspan="11" class="empty-state">
-                        🔍 No properties match the current filters. Try adjusting or
-                        <a href="{{ url_for('properties_page') }}">clearing all filters</a>.
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+            <div id="filterEmpty" class="property-empty" role="status" style="display:none;">
+                <p>🔍 No properties match the current filters. Try adjusting or
+                    <a href="{{ url_for('properties_page') }}">clearing all filters</a>.</p>
+            </div>
+        </div>
         {% else %}
         <p class="empty-state">No properties found. <a href="{{ url_for('add_property_page') }}">Add a property</a> or try clearing filters.</p>
         {% endif %}

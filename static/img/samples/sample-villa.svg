@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Luxury villa sample illustration">
+  <defs>
+    <linearGradient id="vil-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b3a7e"/>
+      <stop offset="0.5" stop-color="#e8776d"/>
+      <stop offset="1" stop-color="#ffd27f"/>
+    </linearGradient>
+    <linearGradient id="vil-wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8ec"/>
+      <stop offset="1" stop-color="#e9d8b8"/>
+    </linearGradient>
+    <linearGradient id="vil-roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b6533f"/>
+      <stop offset="1" stop-color="#8e3c2e"/>
+    </linearGradient>
+    <linearGradient id="vil-pool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fd4ea"/>
+      <stop offset="1" stop-color="#3aa0c9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#vil-sky)"/>
+  <circle cx="300" cy="620" r="110" fill="#ffe3a3" opacity="0.95"/>
+  <rect y="740" width="1600" height="160" fill="#4c7a3d"/>
+  <rect y="726" width="1600" height="14" fill="#c98f4e"/>
+  <path d="M300 640 q-40 30 -140 40 l0 60 140 0 Z" fill="#3f6b33" opacity="0.7"/>
+  <g transform="translate(560 420)">
+    <!-- main volume -->
+    <rect x="0" y="80" width="480" height="150" rx="6" fill="url(#vil-wall)"/>
+    <path d="M-8 80 L240 0 L488 80 Z" fill="url(#vil-roof)"/>
+    <!-- side volume -->
+    <rect x="360" y="120" width="150" height="110" rx="6" fill="#f0e3c8"/>
+    <path d="M352 120 L435 55 L520 120 Z" fill="#a84333"/>
+    <rect x="60" y="120" width="120" height="70" rx="4" fill="#16283e"/>
+    <rect x="72" y="132" width="96" height="46" rx="3" fill="#ffd98a" opacity="0.9"/>
+    <rect x="240" y="120" width="100" height="70" rx="4" fill="#16283e"/>
+    <rect x="256" y="132" width="68" height="46" rx="3" fill="#ffd98a" opacity="0.9"/>
+    <rect x="0" y="230" width="480" height="12" fill="#cfae78"/>
+    <!-- garage -->
+    <rect x="160" y="196" width="150" height="34" rx="4" fill="#b9a372"/>
+    <rect x="168" y="204" width="60" height="26" rx="3" fill="#f2efe6"/>
+  </g>
+  <!-- pool -->
+  <rect x="450" y="700" width="520" height="70" rx="16" fill="url(#vil-pool)"/>
+  <ellipse cx="540" cy="722" rx="70" ry="10" fill="#aee6f5" opacity="0.8"/>
+  <ellipse cx="820" cy="740" rx="80" ry="10" fill="#c9f0fa" opacity="0.8"/>
+  <path d="M1010 690 q10 18 0 36 M1035 690 q10 18 0 36" stroke="#c9f0fa" stroke-width="5" fill="none" opacity="0.85"/>
+  <!-- palm trees -->
+  <g stroke="#6a4a2a" stroke-width="16" stroke-linecap="round">
+    <path d="M1200 900 c-8 -90 -60 -150 -90 -220 M1350 900 c8 -90 60 -150 90 -220"/>
+  </g>
+  <g fill="#2f6b3f">
+    <path d="M1110 600 q-70 -30 -60 -100 q70 10 60 100 Z"/>
+    <path d="M1140 590 q-20 -80 40 -110 q30 70 -40 110 Z"/>
+    <path d="M1180 580 q40 -70 110 -60 q-10 70 -110 60 Z"/>
+    <path d="M1430 600 q70 -30 60 -100 q-70 10 -60 100 Z"/>
+    <path d="M1460 590 q20 -80 -40 -110 q-30 70 40 110 Z"/>
+    <path d="M1420 580 q-40 -70 -110 -60 q10 70 110 60 Z"/>
+  </g>
+</svg>

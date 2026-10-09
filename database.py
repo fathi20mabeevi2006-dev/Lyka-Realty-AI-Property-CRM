@@ -28,6 +28,11 @@ LEAD_COLUMN_MIGRATION = {
     "preferred_location": "TEXT",
     "bedrooms_needed": "INTEGER",
     "notes": "TEXT",
+    "lead_source": "TEXT",
+    "assigned_to": "TEXT",
+    "next_follow_up": "TEXT",
+    "last_contact": "TEXT",
+    "lead_score": "INTEGER DEFAULT 0",
 }
 
 VALID_STATUSES = ("Available", "Sold", "Rented")
@@ -58,6 +63,42 @@ def _optional_int(value, field_label):
 
 def _valid_status(value):
     return value if value in VALID_STATUSES else "Available"
+
+
+LEAD_STATUSES = ("New", "Contacted", "Qualified", "Closed", "Lost")
+
+# Transparent lead-scoring rules. Only real, present information earns points.
+SCORING_RULES = (
+    ("budget recorded", 25, lambda d: d.get("budget") not in (None, "")),
+    ("high budget (>= 20M)", 15, lambda d: d.get("budget") not in (None, "") and float(d.get("budget") or 0) >= 20000000),
+    ("preferred location", 15, lambda d: bool((d.get("preferred_location") or "").strip())),
+    ("bedrooms needed", 15, lambda d: d.get("bedrooms_needed") not in (None, "")),
+    ("phone and email", 10, lambda d: bool((d.get("phone") or "").strip()) and bool((d.get("email") or "").strip())),
+    ("wants swimming pool", 5, lambda d: d.get("needs_swimming_pool") == "Yes"),
+    ("wants nearby metro", 5, lambda d: d.get("needs_nearby_metro") == "Yes"),
+    ("qualified status", 10, lambda d: d.get("status") == "Qualified"),
+    ("contacted status", 5, lambda d: d.get("status") == "Contacted"),
+    ("closed status", 10, lambda d: d.get("status") == "Closed"),
+)
+
+
+def _lead_score(data):
+    """Calculate 0-100 from real lead info. Never invents data; caps at 100."""
+    total = 0
+    for label, points, rule in SCORING_RULES:
+        try:
+            if rule(data):
+                total += points
+        except (TypeError, ValueError):
+            continue
+    return max(0, min(100, total))
+
+
+def _optional_date(value):
+    """Empty → None, otherwise a trimmed date string (browser sends YYYY-MM-DD)."""
+    if value in (None, ""):
+        return None
+    return str(value).strip()
 
 
 def get_connection():
@@ -105,6 +146,11 @@ def init_db():
             needs_nearby_metro TEXT DEFAULT 'No',
             status TEXT DEFAULT 'New',
             notes TEXT,
+            lead_source TEXT,
+            assigned_to TEXT,
+            next_follow_up TEXT,
+            last_contact TEXT,
+            lead_score INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now'))
         )
         """
@@ -309,8 +355,9 @@ def add_lead(data):
             """
             INSERT INTO leads
                 (client_name, phone, email, budget, preferred_location, bedrooms_needed,
-                 needs_swimming_pool, needs_nearby_metro, status, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 needs_swimming_pool, needs_nearby_metro, status, notes,
+                 lead_source, assigned_to, next_follow_up, last_contact, lead_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 data["client_name"],
@@ -323,6 +370,11 @@ def add_lead(data):
                 _yn(data.get("needs_nearby_metro")),
                 data.get("status", "New"),
                 data.get("notes", ""),
+                data.get("lead_source", "") or None,
+                data.get("assigned_to", "") or None,
+                _optional_date(data.get("next_follow_up")),
+                _optional_date(data.get("last_contact")),
+                _lead_score(data),
             ),
         )
         conn.commit()
@@ -339,7 +391,8 @@ def update_lead(lead_id, data):
             UPDATE leads
             SET client_name=?, phone=?, email=?, budget=?, preferred_location=?,
                 bedrooms_needed=?, needs_swimming_pool=?, needs_nearby_metro=?,
-                status=?, notes=?
+                status=?, notes=?, lead_source=?, assigned_to=?, next_follow_up=?,
+                last_contact=?, lead_score=?
             WHERE id=?
             """,
             (
@@ -353,6 +406,11 @@ def update_lead(lead_id, data):
                 _yn(data.get("needs_nearby_metro")),
                 data.get("status", "New"),
                 data.get("notes", ""),
+                data.get("lead_source", "") or None,
+                data.get("assigned_to", "") or None,
+                _optional_date(data.get("next_follow_up")),
+                _optional_date(data.get("last_contact")),
+                _lead_score(data),
                 lead_id,
             ),
         )
@@ -371,19 +429,156 @@ def delete_lead(lead_id):
 # ---------------------- DASHBOARD STATS ----------------------
 
 def get_dashboard_stats():
+    """Read-only headline counts plus safe price totals (never raises on empty DB)."""
     conn = get_connection()
-    stats = {
-        "total_properties": conn.execute("SELECT COUNT(*) FROM properties").fetchone()[0],
-        "available": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Available'"
-        ).fetchone()[0],
-        "sold": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Sold'"
-        ).fetchone()[0],
-        "rented": conn.execute(
-            "SELECT COUNT(*) FROM properties WHERE status = 'Rented'"
-        ).fetchone()[0],
-        "total_leads": conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0],
-    }
+
+    status_counts = {s: 0 for s in VALID_STATUSES}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM properties GROUP BY status"):
+        status_counts[row["status"]] = row["n"]
+
+    price_row = conn.execute(
+        """
+        SELECT
+            COUNT(price)             AS priced_count,
+            COALESCE(SUM(price), 0)  AS portfolio_value,
+            COALESCE(AVG(price), 0)  AS average_price
+        FROM properties
+        WHERE price IS NOT NULL
+        """
+    ).fetchone()
+
+    total_leads = conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
     conn.close()
-    return stats
+
+    return {
+        "total_properties": sum(status_counts.values()),
+        "available": status_counts.get("Available", 0),
+        "sold": status_counts.get("Sold", 0),
+        "rented": status_counts.get("Rented", 0),
+        "total_leads": total_leads,
+        "status_counts": status_counts,
+        "priced_count": price_row["priced_count"] or 0,
+        "portfolio_value": price_row["portfolio_value"] or 0,
+        "average_price": price_row["average_price"] or 0,
+    }
+
+
+def get_location_distribution(limit=8):
+    """Top locations by listing count. Extra locations are bundled into 'Other'."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT location, COUNT(*) AS n
+        FROM properties
+        WHERE location IS NOT NULL AND TRIM(location) <> ''
+        GROUP BY location
+        ORDER BY n DESC
+        """
+    ).fetchall()
+    conn.close()
+
+    items = [{"location": r["location"], "count": r["n"]} for r in rows]
+    if len(items) > limit:
+        top = items[:limit]
+        other = sum(i["count"] for i in items[limit:])
+        if other:
+            top.append({"location": "Other", "count": other})
+        items = top
+    return items
+
+
+def get_bedroom_distribution():
+    """Listing count per bedroom number, in ascending bedroom order."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT bedrooms, COUNT(*) AS n
+        FROM properties
+        GROUP BY bedrooms
+        ORDER BY bedrooms
+        """
+    ).fetchall()
+    conn.close()
+    return [{"bedrooms": r["bedrooms"], "count": r["n"]} for r in rows]
+
+
+def get_lead_status_summary():
+    """Lead counts per status plus safe budget totals (never raises on empty DB)."""
+    known = ("New", "Contacted", "Qualified", "Closed", "Lost")
+    conn = get_connection()
+
+    by_status = {s: 0 for s in known}
+    for row in conn.execute("SELECT status, COUNT(*) AS n FROM leads GROUP BY status"):
+        by_status[row["status"]] = row["n"]
+
+    budget_row = conn.execute(
+        """
+        SELECT
+            COUNT(budget)             AS budgeted_count,
+            COALESCE(SUM(budget), 0)  AS total_budget,
+            COALESCE(AVG(budget), 0)  AS average_budget
+        FROM leads
+        WHERE budget IS NOT NULL
+        """
+    ).fetchone()
+    conn.close()
+
+    return {
+        "total": sum(by_status.values()),
+        "by_status": by_status,
+        "max_status": max(by_status.values()) if by_status else 0,
+        "budgeted_count": budget_row["budgeted_count"] or 0,
+        "total_budget": budget_row["total_budget"] or 0,
+        "average_budget": budget_row["average_budget"] or 0,
+    }
+
+
+def get_recent_properties(limit=6):
+    """Newest listings (with first image thumbnail) using a real LIMIT query."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT p.*,
+            (SELECT filename FROM property_images i
+             WHERE i.property_id = p.id
+             ORDER BY i.id LIMIT 1) AS thumbnail
+        FROM properties p
+        ORDER BY p.id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_recent_leads(limit=5):
+    """Newest leads using a real LIMIT query."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM leads ORDER BY id DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_due_follow_ups(limit=6):
+    """Leads with a scheduled follow-up that is today or already past (overdue).
+
+    Comparison uses date('now') so only the date part matters; the stored
+    format is YYYY-MM-DD. Oldest follow-ups are shown first.
+    """
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT * FROM leads
+        WHERE next_follow_up IS NOT NULL
+          AND TRIM(next_follow_up) <> ''
+          AND next_follow_up <= date('now')
+        ORDER BY next_follow_up ASC, id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
