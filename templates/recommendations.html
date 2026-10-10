@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Matches · {{ lead.client_name }}{% endblock %}
+{% block page_title %}Property Matches{% endblock %}
+{% block page_subtitle %}Recommendations for {{ lead.client_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('leads_page') }}">Leads &amp; Clients</a>
+    <span>/</span>
+    <a href="{{ url_for('lead_detail_page', lead_id=lead.id) }}">{{ lead.client_name }}</a>
+    <span>/</span>
+    <span>Matches</span>
+</nav>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Search Criteria</h2>
+        <form method="post" action="{{ url_for('lead_recommendations_page', lead_id=lead.id) }}" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-gold btn-sm">🏘 Generate / Refresh Matches</button>
+        </form>
+    </div>
+    <div class="panel-body">
+        <div class="spec-grid">
+            <div class="spec-card"><span class="spec-label">Location</span><span class="spec-value">{{ lead.preferred_location or 'Any' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Purpose</span><span class="spec-value">{{ lead.purpose or 'Unknown' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Property type</span><span class="spec-value">{{ lead.property_type or 'Any' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Bedrooms</span><span class="spec-value">{{ lead.bedrooms_needed if lead.bedrooms_needed is not none else 'Any' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Bathrooms</span><span class="spec-value">{{ lead.bathrooms_needed if lead.bathrooms_needed is not none else 'Any' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Budget</span>
+                <span class="spec-value">{% if lead.budget_min or lead.budget_max %}{{ lead.currency or CURRENCY }}
+                    {{ "{:,.0f}".format(lead.budget_min) if lead.budget_min else '' }}
+                    {{ '–' if lead.budget_min and lead.budget_max }}
+                    {{ "{:,.0f}".format(lead.budget_max) if lead.budget_max else '' }}
+                {% else %}Any{% endif %}</span>
+            </div>
+            <div class="spec-card"><span class="spec-label">Amenities</span><span class="spec-value">{{ lead.amenities | join(', ') if lead.amenities else 'Any' }}</span></div>
+        </div>
+        <p class="muted small" style="margin-top:0.75rem;">
+            Only <strong>Available</strong> listings are considered. Weights:
+            {% for name, weight in weights.items() %}{{ name }} {{ weight }}{{ ', ' if not loop.last }}{% endfor %}.
+            Engine v{{ engine }}.
+        </p>
+    </div>
+</section>
+
+{% if outcome %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>{{ outcome.results|length }} Match{{ '' if outcome.results|length == 1 else 'es' }}</h2>
+        <span class="muted small">{{ outcome.count_eligible }} eligible of {{ outcome.count_considered }} listings · threshold {{ outcome.threshold }}</span>
+    </div>
+    <div class="panel-body">
+        <p class="{{ 'flash flash-success' if outcome.results else 'flash flash-info' }}">{{ outcome.message }}</p>
+
+        {% for item in outcome.results %}
+        <div class="spec-card" style="margin-bottom:0.75rem;">
+            <span class="spec-label">Match score {{ item.match_score }}/100</span>
+            <span class="spec-value">
+                <a href="{{ url_for('property_detail_page', property_id=item.property.id) }}">{{ item.property.name }}</a>
+            </span>
+            <span class="muted small">📍 {{ item.property.location }}
+                {% if item.property.price is not none %} · {{ CURRENCY }} {{ "{:,.0f}".format(item.property.price) }}{% endif %}
+                {% if item.property.bedrooms is not none %} · {{ item.property.bedrooms }} bed{% endif %}
+                {% if item.property.bathrooms is not none %} · {{ item.property.bathrooms }} bath{% endif %}</span>
+            {% if item.reasons %}<span class="muted small">✔ {{ item.reasons | join('; ') }}</span>{% endif %}
+            {% if item.mismatches %}<span class="muted small">⚠ {{ item.mismatches | join('; ') }}</span>{% endif %}
+        </div>
+        {% endfor %}
+
+        {% if outcome.hard_filters %}
+        <p class="muted small">Hard filters — availability: {{ outcome.hard_filters.availability }},
+            purpose: {{ outcome.hard_filters.purpose }}, location: {{ outcome.hard_filters.location }}.</p>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Saved Recommendations</h2>
+        <span class="muted small">{{ history|length }} stored row{{ '' if history|length == 1 else 's' }}</span>
+    </div>
+    <div class="panel-body">
+        {% if latest %}
+        <div class="mini-list">
+            {% for rec in latest %}
+            <div class="spec-card" style="margin-bottom:0.6rem;">
+                <span class="spec-label">Score {{ rec.match_score }}/100 · saved {{ rec.created_at }}</span>
+                <span class="spec-value">
+                    {% if rec.property_id %}<a href="{{ url_for('property_detail_page', property_id=rec.property_id) }}">{{ rec.snapshot.get('name', 'Property #' ~ rec.property_id) }}</a>{% else %}{{ rec.snapshot.get('name', 'Property (removed)') }}{% endif %}
+                </span>
+                <span class="muted small">{{ rec.snapshot.get('location', '') }}</span>
+                {% if rec.reasons %}<span class="muted small">✔ {{ rec.reasons | join('; ') }}</span>{% endif %}
+                {% if rec.mismatches %}<span class="muted small">⚠ {{ rec.mismatches | join('; ') }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted small">No saved recommendations yet — click “Generate / Refresh Matches”.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

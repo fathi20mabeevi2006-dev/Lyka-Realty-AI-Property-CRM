@@ -4,6 +4,7 @@ Handles all SQLite database operations for the Property CRM.
 Beginner-friendly helper functions - no raw SQL needed in app.py.
 """
 
+import json
 import sqlite3
 import os
 from datetime import datetime
@@ -22,6 +23,16 @@ PROPERTY_COLUMN_MIGRATION = {
     "property_size": "REAL",
     "created_at": "TEXT DEFAULT (datetime('now'))",
     "updated_at": "TEXT",
+    # PRD §E — additive columns (existing rows keep their data; the defaults
+    # below are applied to legacy rows by SQLite's ALTER TABLE semantics).
+    "listing_purpose": "TEXT DEFAULT 'Sale'",
+    "amenities": "TEXT",
+    "currency": "TEXT",
+    "area_sqft": "REAL",
+    "description": "TEXT",
+    "building_name": "TEXT",
+    "agent_name": "TEXT",
+    "is_demo": "INTEGER DEFAULT 0",
 }
 
 # Same idea for the leads table (requirement columns used by matching/search).
@@ -39,7 +50,25 @@ LEAD_COLUMN_MIGRATION = {
     "updated_at": "TEXT",
     "owner_user_id": "INTEGER",
     "client_user_id": "INTEGER",
+    # PRD §B/C/D — extracted requirements, scoring breakdown and priority.
+    "lead_type": "TEXT",
+    "property_type": "TEXT",
+    "bathrooms_needed": "INTEGER",
+    "budget_min": "REAL",
+    "budget_max": "REAL",
+    "currency": "TEXT",
+    "purpose": "TEXT",
+    "amenities": "TEXT",
+    "timeline_days": "INTEGER",
+    "timeline_label": "TEXT",
+    "missing_fields": "TEXT",
+    "score_breakdown": "TEXT",
+    "priority": "TEXT",
+    "raw_enquiry": "TEXT",
+    "analysis_provider": "TEXT",
+    "analysed_at": "TEXT",
 }
+
 
 VALID_STATUSES = ("Available", "Sold", "Rented")
 
@@ -63,12 +92,21 @@ REQUIREMENT_CATEGORIES = (
 )
 
 
-def _ensure_columns(cur, table, expected):
-    """Add any missing columns to an existing table (safe to run repeatedly)."""
+def _missing_columns(cur, table, expected):
     existing = {row[1] for row in cur.execute(f"PRAGMA table_info({table})")}
-    for column, declaration in expected.items():
-        if column not in existing:
-            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+    return [column for column in expected if column not in existing]
+
+
+def _ensure_columns(cur, table, expected):
+    """Add any missing columns to an existing table (safe to run repeatedly).
+
+    Returns the columns that were actually added."""
+    added = _missing_columns(cur, table, expected)
+    for column in added:
+        cur.execute(
+            f"ALTER TABLE {table} ADD COLUMN {column} {expected[column]}"
+        )
+    return added
 
 
 def _yn(value):
@@ -100,39 +138,61 @@ def _valid_status(value):
     return value if value in VALID_STATUSES else "Available"
 
 
+# PRD §E — listing purpose is an explicit Sale/Rent choice. A blank value is
+# allowed as an input meaning "not stated" (legacy/imported rows may have no
+# recorded purpose); it is NEVER auto-guessed into Sale or Rent.
+PROPERTY_PURPOSES = ("Sale", "Rent")
+
+
+def _valid_purpose(value, default=None):
+    """Canonicalise a listing purpose.
+
+    - blank/None        -> `default` (caller decides: 'Sale' on create,
+                           None on update so the stored value is preserved),
+    - 'sale'/'Sale'/... -> 'Sale', 'rent'/'Rent'/... -> 'Rent',
+    - anything else     -> ValueError (an invalid purpose is never persisted).
+    """
+    text = str(value or "").strip()
+    if not text:
+        return default
+    for purpose in PROPERTY_PURPOSES:
+        if text.lower() == purpose.lower():
+            return purpose
+    raise ValueError("Listing purpose must be Sale or Rent")
+
+
 def _valid_choice(value, allowed, default):
     """Return value if it is in the allowed whitelist, else the default."""
     value = str(value or "").strip()
     return value if value in allowed else default
 
 
-LEAD_STATUSES = ("New", "Contacted", "Qualified", "Closed", "Lost")
-
-# Transparent lead-scoring rules. Only real, present information earns points.
-SCORING_RULES = (
-    ("budget recorded", 25, lambda d: d.get("budget") not in (None, "")),
-    ("high budget (>= 20M)", 15, lambda d: d.get("budget") not in (None, "") and float(d.get("budget") or 0) >= 20000000),
-    ("preferred location", 15, lambda d: bool((d.get("preferred_location") or "").strip())),
-    ("bedrooms needed", 15, lambda d: d.get("bedrooms_needed") not in (None, "")),
-    ("phone and email", 10, lambda d: bool((d.get("phone") or "").strip()) and bool((d.get("email") or "").strip())),
-    ("wants swimming pool", 5, lambda d: d.get("needs_swimming_pool") == "Yes"),
-    ("wants nearby metro", 5, lambda d: d.get("needs_nearby_metro") == "Yes"),
-    ("qualified status", 10, lambda d: d.get("status") == "Qualified"),
-    ("contacted status", 5, lambda d: d.get("status") == "Contacted"),
-    ("closed status", 10, lambda d: d.get("status") == "Closed"),
+# PRD §G — the canonical lead pipeline. These are the values the UI offers
+# and the API accepts for new writes.
+LEAD_STATUSES = (
+    "New", "Analysed", "Qualified", "Property Matched", "Follow-up",
+    "Viewing Scheduled", "Converted", "Lost",
 )
+
+# Statuses that predate the PRD pipeline. Existing rows keep them (they are
+# never rewritten) and they stay selectable so no historical record becomes
+# invalid — new leads use LEAD_STATUSES.
+LEGACY_LEAD_STATUSES = ("Contacted", "Closed")
+
+ALL_LEAD_STATUSES = LEAD_STATUSES + LEGACY_LEAD_STATUSES
 
 
 def _lead_score(data):
-    """Calculate 0-100 from real lead info. Never invents data; caps at 100."""
-    total = 0
-    for label, points, rule in SCORING_RULES:
-        try:
-            if rule(data):
-                total += points
-        except (TypeError, ValueError):
-            continue
-    return max(0, min(100, total))
+    """PRD §D — transparent 0-100 qualification score.
+
+    Delegates to services.qualification so the weights live in exactly one
+    place. Never raises: a scoring failure must not block a save.
+    """
+    try:
+        from services.qualification import score_lead
+        return score_lead(data)
+    except Exception:  # noqa: BLE001 - fall back to "no score", never 500
+        return {"score": 0, "priority": "Low", "breakdown": []}
 
 
 def _optional_date(value):
@@ -295,8 +355,70 @@ def init_db():
     )
 
     # --- automatic migration: upgrade older databases in place ---
+    # Detect what is missing FIRST and back up before touching the schema,
+    # so every additive migration stays reversible (never drops or rewrites).
+    pending_migration = bool(
+        _missing_columns(cur, "properties", PROPERTY_COLUMN_MIGRATION)
+        or _missing_columns(cur, "leads", LEAD_COLUMN_MIGRATION)
+        or "lead_notes" not in existing_tables
+        or "lead_status_history" not in existing_tables
+        or "recommendations" not in existing_tables
+    )
+    if pending_migration:
+        backup_db()
+
     _ensure_columns(cur, "properties", PROPERTY_COLUMN_MIGRATION)
     _ensure_columns(cur, "leads", LEAD_COLUMN_MIGRATION)
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lead_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER NOT NULL,
+            author TEXT,
+            body TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (lead_id) REFERENCES leads (id)
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lead_status_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER NOT NULL,
+            from_status TEXT,
+            to_status TEXT NOT NULL,
+            changed_by TEXT,
+            changed_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (lead_id) REFERENCES leads (id)
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS recommendations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER NOT NULL,
+            property_id INTEGER,
+            match_score INTEGER NOT NULL DEFAULT 0,
+            reasons TEXT,
+            mismatches TEXT,
+            snapshot TEXT,
+            engine_version TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            FOREIGN KEY (lead_id) REFERENCES leads (id)
+        )
+        """
+    )
+    for index_sql in (
+        "CREATE INDEX IF NOT EXISTS idx_notes_lead ON lead_notes (lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_status_history_lead "
+        "ON lead_status_history (lead_id)",
+        "CREATE INDEX IF NOT EXISTS idx_recommendations_lead "
+        "ON recommendations (lead_id)",
+    ):
+        cur.execute(index_sql)
 
     # ---------------------- Phase 2: auth & access control ----------------------
     cur.execute(
@@ -379,6 +501,21 @@ def init_db():
         ON leads (client_user_id)
         """
     )
+
+    # --- PRD §D: backfill the derived score/priority for lead rows created
+    # --- before the PRD scoring rules existed. Derived columns only — the
+    # --- source data of existing records is never modified.
+    stale_leads = cur.execute(
+        "SELECT * FROM leads WHERE priority IS NULL"
+    ).fetchall()
+    for row in stale_leads:
+        result = _lead_score(dict(row))
+        cur.execute(
+            "UPDATE leads SET lead_score=?, priority=?, score_breakdown=? "
+            "WHERE id=?",
+            (result["score"], result["priority"],
+             json.dumps(result["breakdown"]), row["id"]),
+        )
 
     conn.commit()
     conn.close()
@@ -666,8 +803,8 @@ def add_property(data):
             INSERT INTO properties
                 (name, location, price, bedrooms, bathrooms, floor_number,
                  property_view, has_swimming_pool, nearby_metro, status,
-                 property_type, property_size)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 property_type, property_size, listing_purpose)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 data["name"].strip(),
@@ -682,6 +819,9 @@ def add_property(data):
                 _valid_status(data.get("status")),
                 (data.get("property_type") or "").strip() or None,
                 _optional_float(data.get("property_size"), "Property size"),
+                # Backward compatible: an omitted purpose keeps the historical
+                # default ('Sale'); an explicit, validated choice otherwise.
+                _valid_purpose(data.get("listing_purpose"), default="Sale"),
             ),
         )
         conn.commit()
@@ -693,12 +833,18 @@ def add_property(data):
 def update_property(property_id, data):
     conn = get_connection()
     try:
+        # Validate BEFORE touching the row. A blank/absent purpose maps to
+        # None and COALESCE keeps the stored value, so a legacy row whose
+        # purpose is unknown is never silently re-labelled on an unrelated edit.
+        purpose = _valid_purpose(data.get("listing_purpose"), default=None)
         conn.execute(
             """
             UPDATE properties
             SET name=?, location=?, price=?, bedrooms=?, bathrooms=?, floor_number=?,
                 property_view=?, has_swimming_pool=?, nearby_metro=?, status=?,
-                property_type=?, property_size=?, updated_at=datetime('now')
+                property_type=?, property_size=?,
+                listing_purpose=COALESCE(?, listing_purpose),
+                updated_at=datetime('now')
             WHERE id=?
             """,
             (
@@ -714,6 +860,7 @@ def update_property(property_id, data):
                 _valid_status(data.get("status")),
                 (data.get("property_type") or "").strip() or None,
                 _optional_float(data.get("property_size"), "Property size"),
+                purpose,
                 property_id,
             ),
         )
@@ -795,32 +942,81 @@ def delete_property_image(image_id):
 
 # ---------------------- LEADS ----------------------
 
+def _decode_lead(row):
+    """Turn a raw lead row into a dict with JSON columns expanded to lists."""
+    lead = dict(row)
+    for column in ("amenities", "missing_fields", "score_breakdown"):
+        if column in lead:
+            lead[column] = _read_json_list(lead[column])
+    return lead
+
+
 def get_all_leads():
     conn = get_connection()
     rows = conn.execute("SELECT * FROM leads ORDER BY id DESC").fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    return [_decode_lead(r) for r in rows]
 
 
 def get_lead(lead_id):
     conn = get_connection()
     row = conn.execute("SELECT * FROM leads WHERE id = ?", (lead_id,)).fetchone()
     conn.close()
-    return dict(row) if row else None
+    return _decode_lead(row) if row else None
+
+
+def _json_list(value):
+    """Normalise a list-ish value to a JSON array string (or None)."""
+    if value in (None, ""):
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        if stripped.startswith("["):
+            try:
+                value = json.loads(stripped)
+            except json.JSONDecodeError:
+                value = [stripped]
+        else:
+            value = [part.strip() for part in stripped.split(",") if part.strip()]
+    if not isinstance(value, (list, tuple)):
+        value = [value]
+    return json.dumps([str(v)[:200] for v in value][:50])
+
+
+def _read_json_list(value):
+    """Stored JSON array -> python list (never raises)."""
+    if not value:
+        return []
+    if isinstance(value, (list, tuple)):
+        return list(value)
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except (json.JSONDecodeError, TypeError):
+        return []
 
 
 def add_lead(data):
     conn = get_connection()
     try:
         cur = conn.cursor()
+        scoring = _lead_score(data)
+        status = _valid_choice(data.get("status"), ALL_LEAD_STATUSES, "New")
         cur.execute(
             """
             INSERT INTO leads
-                (client_name, phone, email, budget, preferred_location, bedrooms_needed,
-                 needs_swimming_pool, needs_nearby_metro, status, notes,
-                 lead_source, assigned_to, next_follow_up, last_contact, lead_score,
-                 owner_user_id, client_user_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (client_name, phone, email, budget, preferred_location,
+                 bedrooms_needed, needs_swimming_pool, needs_nearby_metro,
+                 status, notes, lead_source, assigned_to, next_follow_up,
+                 last_contact, lead_score, owner_user_id, client_user_id,
+                 lead_type, property_type, bathrooms_needed, budget_min,
+                 budget_max, currency, purpose, amenities, timeline_days,
+                 timeline_label, missing_fields, score_breakdown, priority,
+                 raw_enquiry, analysis_provider, analysed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 data["client_name"],
@@ -831,19 +1027,43 @@ def add_lead(data):
                 int(data["bedrooms_needed"]) if data.get("bedrooms_needed") not in (None, "") else None,
                 _yn(data.get("needs_swimming_pool")),
                 _yn(data.get("needs_nearby_metro")),
-                data.get("status", "New"),
+                status,
                 data.get("notes", ""),
                 data.get("lead_source", "") or None,
                 data.get("assigned_to", "") or None,
                 _optional_date(data.get("next_follow_up")),
                 _optional_date(data.get("last_contact")),
-                _lead_score(data),
+                scoring["score"],
                 _optional_int(data.get("owner_user_id"), "Owner id") if data.get("owner_user_id") not in (None, "") else None,
                 _optional_int(data.get("client_user_id"), "Client id") if data.get("client_user_id") not in (None, "") else None,
+                (data.get("lead_type") or "").strip() or None,
+                (data.get("property_type") or "").strip() or None,
+                _optional_int(data.get("bathrooms_needed"), "Bathrooms"),
+                _optional_float(data.get("budget_min"), "Minimum budget"),
+                _optional_float(data.get("budget_max"), "Maximum budget"),
+                (data.get("currency") or "").strip() or None,
+                (data.get("purpose") or "").strip() or None,
+                _json_list(data.get("amenities")),
+                _optional_int(data.get("timeline_days"), "Timeline"),
+                (data.get("timeline_label") or "").strip() or None,
+                _json_list(data.get("missing_fields")),
+                json.dumps(scoring["breakdown"]),
+                scoring["priority"],
+                (data.get("raw_enquiry") or "").strip() or None,
+                (data.get("analysis_provider") or "").strip() or None,
+                (data.get("analysed_at") or "").strip() or None,
             ),
         )
+        lead_id = cur.lastrowid
+        if status != "New":
+            cur.execute(
+                "INSERT INTO lead_status_history "
+                "(lead_id, from_status, to_status, changed_by) "
+                "VALUES (?, NULL, ?, ?)",
+                (lead_id, status, (data.get("created_by") or "").strip() or None),
+            )
         conn.commit()
-        return cur.lastrowid
+        return lead_id
     finally:
         conn.close()
 
@@ -857,11 +1077,23 @@ def update_lead(lead_id, data):
         # otherwise a Sales user editing a lead would silently unassign it
         # and a linked Client would lose access to their own lead.
         existing = conn.execute(
-            "SELECT owner_user_id, client_user_id FROM leads WHERE id = ?",
+            "SELECT owner_user_id, client_user_id, status FROM leads WHERE id = ?",
             (lead_id,),
         ).fetchone()
+        if existing is None:
+            raise ValueError("Lead not found")
         existing_owner = existing["owner_user_id"]
         existing_client = existing["client_user_id"]
+
+        analysis_row = conn.execute(
+            "SELECT * FROM leads WHERE id = ?", (lead_id,)
+        ).fetchone()
+
+        def kept(column):
+            """Value for an analysis column: submitted value, else stored one."""
+            if column in data:
+                return data[column]
+            return analysis_row[column] if analysis_row else None
 
         owner_raw = data.get("owner_user_id", existing_owner)
         client_raw = data.get("client_user_id", existing_client)
@@ -874,6 +1106,21 @@ def update_lead(lead_id, data):
             if client_raw in (None, "") else _optional_int(client_raw, "Client id")
         )
 
+        # Re-score against the MERGED record, not just the submitted form.
+        # The legacy edit form never renders the AI/analysis columns
+        # (purpose, property_type, amenities, timeline, budget_min/max, ...),
+        # so scoring only the submitted dict would silently drop the points a
+        # lead already earned. Stored values are the base; anything the caller
+        # actually submitted overrides them, so a real change still re-scores.
+        scoring_input = dict(analysis_row) if analysis_row is not None else {}
+        for json_column in ("amenities", "missing_fields"):
+            if scoring_input.get(json_column) not in (None, ""):
+                scoring_input[json_column] = _read_json_list(scoring_input[json_column])
+        scoring_input.update(data)
+
+        status = _valid_choice(data.get("status"), ALL_LEAD_STATUSES, "New")
+        scoring = _lead_score(scoring_input)
+
         conn.execute(
             """
             UPDATE leads
@@ -881,7 +1128,11 @@ def update_lead(lead_id, data):
                 bedrooms_needed=?, needs_swimming_pool=?, needs_nearby_metro=?,
                 status=?, notes=?, lead_source=?, assigned_to=?, next_follow_up=?,
                 last_contact=?, lead_score=?, owner_user_id=?, client_user_id=?,
-                updated_at=datetime('now')
+                lead_type=?, property_type=?, bathrooms_needed=?, budget_min=?,
+                budget_max=?, currency=?, purpose=?, amenities=?,
+                timeline_days=?, timeline_label=?, missing_fields=?,
+                score_breakdown=?, priority=?, raw_enquiry=?,
+                analysis_provider=?, analysed_at=?, updated_at=datetime('now')
             WHERE id=?
             """,
             (
@@ -893,18 +1144,44 @@ def update_lead(lead_id, data):
                 int(data["bedrooms_needed"]) if data.get("bedrooms_needed") not in (None, "") else None,
                 _yn(data.get("needs_swimming_pool")),
                 _yn(data.get("needs_nearby_metro")),
-                data.get("status", "New"),
+                status,
                 data.get("notes", ""),
                 data.get("lead_source", "") or None,
                 data.get("assigned_to", "") or None,
                 _optional_date(data.get("next_follow_up")),
                 _optional_date(data.get("last_contact")),
-                _lead_score(data),
+                scoring["score"],
                 owner_value,
                 client_value,
+                (kept("lead_type") or "").strip() or None,
+                (kept("property_type") or "").strip() or None,
+                _optional_int(kept("bathrooms_needed"), "Bathrooms"),
+                _optional_float(kept("budget_min"), "Minimum budget"),
+                _optional_float(kept("budget_max"), "Maximum budget"),
+                (kept("currency") or "").strip() or None,
+                (kept("purpose") or "").strip() or None,
+                _json_list(kept("amenities")),
+                _optional_int(kept("timeline_days"), "Timeline"),
+                (kept("timeline_label") or "").strip() or None,
+                _json_list(kept("missing_fields")),
+                json.dumps(scoring["breakdown"]),
+                scoring["priority"],
+                (kept("raw_enquiry") or "").strip() or None,
+                (kept("analysis_provider") or "").strip() or None,
+                (kept("analysed_at") or "").strip() or None,
                 lead_id,
             ),
         )
+
+        # PRD §G — record a timestamped history row when the status changed.
+        if status != existing["status"]:
+            conn.execute(
+                "INSERT INTO lead_status_history "
+                "(lead_id, from_status, to_status, changed_by) "
+                "VALUES (?, ?, ?, ?)",
+                (lead_id, existing["status"], status,
+                 (data.get("changed_by") or "").strip() or None),
+            )
         conn.commit()
     finally:
         conn.close()
@@ -915,6 +1192,156 @@ def delete_lead(lead_id):
     conn.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
     conn.commit()
     conn.close()
+
+
+# ---------------------- LEAD NOTES / HISTORY / RECOMMENDATIONS ----------------------
+
+def add_lead_note(lead_id, body, author=None):
+    """PRD §G — append a timestamped follow-up note to a lead."""
+    body = (body or "").strip()
+    if not body:
+        raise ValueError("Note text is required")
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO lead_notes (lead_id, author, body) VALUES (?, ?, ?)",
+            (lead_id, (author or "").strip() or None, body[:4000]),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def get_lead_notes(lead_id):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM lead_notes WHERE lead_id = ? ORDER BY id DESC",
+        (lead_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_lead_status_history(lead_id):
+    """PRD §G — timestamped history of status changes for a lead."""
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM lead_status_history WHERE lead_id = ? "
+        "ORDER BY id DESC",
+        (lead_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def _decode_recommendation(row):
+    item = dict(row)
+    for column, default in (("reasons", []), ("mismatches", []), ("snapshot", {})):
+        raw = item.get(column)
+        if raw in (None, ""):
+            item[column] = default
+            continue
+        try:
+            decoded = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            decoded = default
+        if isinstance(default, list) and not isinstance(decoded, list):
+            decoded = default
+        if isinstance(default, dict) and not isinstance(decoded, dict):
+            decoded = default
+        item[column] = decoded
+    return item
+
+
+def save_recommendations(lead_id, results, engine_version=None):
+    """PRD §E/F — persist one recommendation run (all rows share `created_at`,
+    which is what identifies the run). Previous runs are kept as history.
+    Returns the run timestamp."""
+    run_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    try:
+        for item in results:
+            prop = item.get("property") or {}
+            conn.execute(
+                """
+                INSERT INTO recommendations
+                    (lead_id, property_id, match_score, reasons, mismatches,
+                     snapshot, engine_version, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    lead_id,
+                    item.get("property_id") or prop.get("id"),
+                    int(item.get("match_score", item.get("score", 0)) or 0),
+                    json.dumps(item.get("reasons") or []),
+                    json.dumps(item.get("mismatches") or []),
+                    json.dumps(prop),
+                    engine_version,
+                    run_at,
+                ),
+            )
+        conn.commit()
+        return run_at
+    finally:
+        conn.close()
+
+
+def get_lead_recommendations(lead_id, limit=None):
+    """Full recommendation history for a lead, newest run first."""
+    conn = get_connection()
+    query = (
+        "SELECT * FROM recommendations WHERE lead_id = ? "
+        "ORDER BY created_at DESC, match_score DESC, id DESC"
+    )
+    params = (lead_id,)
+    if limit:
+        query += " LIMIT ?"
+        params = (lead_id, limit)
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return [_decode_recommendation(r) for r in rows]
+
+
+def get_latest_recommendations(lead_id):
+    """The most recent recommendation run for a lead (empty list if none)."""
+    conn = get_connection()
+    latest = conn.execute(
+        "SELECT MAX(created_at) FROM recommendations WHERE lead_id = ?",
+        (lead_id,),
+    ).fetchone()[0]
+    if not latest:
+        conn.close()
+        return []
+    rows = conn.execute(
+        "SELECT * FROM recommendations WHERE lead_id = ? AND created_at = ? "
+        "ORDER BY match_score DESC",
+        (lead_id, latest),
+    ).fetchall()
+    conn.close()
+    return [_decode_recommendation(r) for r in rows]
+
+
+def get_recent_recommendations(limit=5):
+    """Dashboard feed: newest recommendation rows joined to lead + property."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT r.*, l.client_name AS lead_name, l.priority AS lead_priority,
+               p.name AS property_name, p.location AS property_location,
+               p.price AS property_price, p.bedrooms AS property_bedrooms,
+               p.property_type AS property_type,
+               p.listing_purpose AS listing_purpose
+        FROM recommendations r
+        LEFT JOIN leads l ON l.id = r.lead_id
+        LEFT JOIN properties p ON p.id = r.property_id
+        ORDER BY r.created_at DESC, r.match_score DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+    return [_decode_recommendation(r) for r in rows]
 
 
 # ---------------------- DASHBOARD STATS ----------------------
@@ -939,6 +1366,16 @@ def get_dashboard_stats():
     ).fetchone()
 
     total_leads = conn.execute("SELECT COUNT(*) FROM leads").fetchone()[0]
+    analysed_leads = conn.execute(
+        "SELECT COUNT(*) FROM leads WHERE analysed_at IS NOT NULL "
+        "AND TRIM(analysed_at) <> ''"
+    ).fetchone()[0]
+    high_priority = conn.execute(
+        "SELECT COUNT(*) FROM leads WHERE priority = 'High'"
+    ).fetchone()[0]
+    matched_leads = conn.execute(
+        "SELECT COUNT(*) FROM leads WHERE status = 'Property Matched'"
+    ).fetchone()[0]
     conn.close()
 
     return {
@@ -947,6 +1384,9 @@ def get_dashboard_stats():
         "sold": status_counts.get("Sold", 0),
         "rented": status_counts.get("Rented", 0),
         "total_leads": total_leads,
+        "analysed_leads": analysed_leads,
+        "high_priority_leads": high_priority,
+        "matched_leads": matched_leads,
         "status_counts": status_counts,
         "priced_count": price_row["priced_count"] or 0,
         "portfolio_value": price_row["portfolio_value"] or 0,
@@ -995,12 +1435,21 @@ def get_bedroom_distribution():
 
 def get_lead_status_summary():
     """Lead counts per status plus safe budget totals (never raises on empty DB)."""
-    known = ("New", "Contacted", "Qualified", "Closed", "Lost")
     conn = get_connection()
 
+    # Every PRD status plus the legacy ones, so old rows still render.
+    known = ALL_LEAD_STATUSES
     by_status = {s: 0 for s in known}
+    by_priority = {"High": 0, "Medium": 0, "Low": 0}
     for row in conn.execute("SELECT status, COUNT(*) AS n FROM leads GROUP BY status"):
+        if row["status"] not in by_status:
+            by_status[row["status"]] = 0
         by_status[row["status"]] = row["n"]
+    for row in conn.execute(
+        "SELECT priority, COUNT(*) AS n FROM leads GROUP BY priority"
+    ):
+        if row["priority"] in by_priority:
+            by_priority[row["priority"]] = row["n"]
 
     budget_row = conn.execute(
         """
@@ -1017,6 +1466,7 @@ def get_lead_status_summary():
     return {
         "total": sum(by_status.values()),
         "by_status": by_status,
+        "by_priority": by_priority,
         "max_status": max(by_status.values()) if by_status else 0,
         "budgeted_count": budget_row["budgeted_count"] or 0,
         "total_budget": budget_row["total_budget"] or 0,

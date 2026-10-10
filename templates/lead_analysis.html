@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Analyse Enquiry{% endblock %}
+{% block page_title %}AI Lead Analysis{% endblock %}
+{% block page_subtitle %}Paste a customer enquiry — the assistant extracts the requirements{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+    <div class="panel-header">
+        <h2>1 · Customer Enquiry</h2>
+        <span class="muted small">
+            {% if provider_status.openai %}OpenAI ready
+            {% elif provider_status.groq %}Groq ready
+            {% else %}Offline extractor (no AI key configured){% endif %}
+        </span>
+    </div>
+    <div class="panel-body">
+        <form method="post" action="{{ url_for('analyse_lead_page') }}" class="crm-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="enquiry">Enquiry text <span class="req">*</span></label>
+                <textarea id="enquiry" name="enquiry" class="input" rows="7" required
+                          maxlength="4000"
+                          placeholder="e.g. Hi, I'm looking for a 2-bedroom apartment in Dubai Marina with a swimming pool, budget around AED 1.8 million, ready to move within 3 months. You can reach me on +971 50 123 4567.">{{ enquiry or '' }}</textarea>
+                <p class="muted small">Up to 4000 characters. Only information the customer actually stated is captured.</p>
+            </div>
+            {% if provider_status.groq or provider_status.openai %}
+            <div class="form-group">
+                <label for="provider">AI provider</label>
+                <select id="provider" name="provider" class="input select">
+                    <option value="">Automatic (preferred available)</option>
+                    {% if provider_status.openai %}<option value="openai">OpenAI · {{ provider_status.openai_model }}</option>{% endif %}
+                    {% if provider_status.groq %}<option value="groq">Groq · {{ provider_status.groq_model }}</option>{% endif %}
+                    <option value="offline">Offline rule-based (no network)</option>
+                </select>
+            </div>
+            {% endif %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">✨ Analyse Enquiry</button>
+                <a href="{{ url_for('leads_page') }}" class="btn btn-ghost">Back to Leads</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if result %}
+<section class="panel">
+    <div class="panel-header">
+        <h2>2 · Extracted Requirements</h2>
+        <span class="muted small">
+            {{ result.provider }}{% if result.model %} · {{ result.model }}{% endif %}
+            · {{ result.elapsed_ms }} ms
+        </span>
+    </div>
+    <div class="panel-body">
+        {% if result.degraded %}
+        <div class="flash flash-error" style="margin-bottom:1rem;">
+            ⚠️ Live AI was unavailable — a rule-based extractor was used. Review every field before saving.
+        </div>
+        {% endif %}
+        {% for warning in result.warnings %}
+        <div class="flash flash-info" style="margin-bottom:0.5rem;">{{ warning }}</div>
+        {% endfor %}
+
+        <div class="spec-grid">
+            <div class="spec-card"><span class="spec-label">Contact name</span><span class="spec-value">{{ result.fields.customer_name or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Phone</span><span class="spec-value">{{ result.fields.phone or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Email</span><span class="spec-value">{{ result.fields.email or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Lead type</span><span class="spec-value">{{ result.fields.lead_type or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Purpose</span><span class="spec-value">{{ result.fields.purpose or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Property type</span><span class="spec-value">{{ result.fields.property_type or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Location</span><span class="spec-value">{{ result.fields.preferred_location or '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Bedrooms</span><span class="spec-value">{{ result.fields.bedrooms if result.fields.bedrooms is not none else '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Bathrooms</span><span class="spec-value">{{ result.fields.bathrooms if result.fields.bathrooms is not none else '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Budget</span>
+                <span class="spec-value">{% if result.fields.budget_max or result.fields.budget_min %}{{ result.fields.currency or CURRENCY }}
+                    {{ "{:,.0f}".format(result.fields.budget_min) if result.fields.budget_min else '' }}
+                    {{ '–' if result.fields.budget_min and result.fields.budget_max }}
+                    {{ "{:,.0f}".format(result.fields.budget_max) if result.fields.budget_max else '' }}
+                {% else %}—{% endif %}</span>
+            </div>
+            <div class="spec-card"><span class="spec-label">Amenities</span><span class="spec-value">{{ result.fields.amenities | join(', ') if result.fields.amenities else '—' }}</span></div>
+            <div class="spec-card"><span class="spec-label">Timeline</span><span class="spec-value">{{ result.fields.timeline_label or (result.fields.timeline_days ~ ' days' if result.fields.timeline_days is not none else '—') }}</span></div>
+        </div>
+
+        {% if result.missing_fields %}
+        <div class="panel-header" style="margin-top:1.25rem;">
+            <h3>Missing information</h3>
+        </div>
+        <p class="muted small">The assistant will not guess — these were not stated:</p>
+        <ul class="muted small">
+            {% for question in result.clarification_questions %}
+            <li>❓ {{ question }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted small">All key requirements were captured. 🎉</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel form-panel">
+    <div class="panel-header">
+        <h2>3 · Review &amp; Save as Lead</h2>
+        <span class="muted small">Edit anything before saving</span>
+    </div>
+    <div class="panel-body">
+        <form method="post" action="{{ url_for('save_analysed_lead_page') }}" class="crm-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="raw_enquiry" value="{{ enquiry }}">
+            <input type="hidden" name="analysis_provider" value="{{ form_data.analysis_provider }}">
+            <input type="hidden" name="analysed_at" value="{{ form_data.analysed_at }}">
+            <input type="hidden" name="missing_fields" value="{{ form_data.missing_fields }}">
+            <div class="form-grid">
+                <div class="form-section-title span-2">Client Details</div>
+                <div class="form-group span-2">
+                    <label for="client_name">Client Name <span class="req">*</span></label>
+                    <input type="text" id="client_name" name="client_name" class="input" required
+                           value="{{ form_data.client_name }}">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone</label>
+                    <input type="text" id="phone" name="phone" class="input" value="{{ form_data.phone }}">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" class="input" value="{{ form_data.email }}">
+                </div>
+
+                <div class="form-section-title span-2">Extracted Requirements</div>
+                <div class="form-group">
+                    <label for="lead_type">Lead Type</label>
+                    <select id="lead_type" name="lead_type" class="input select">
+                        {% for t in ['', 'buyer', 'renter', 'seller', 'enquiry'] %}
+                        <option value="{{ t }}" {{ 'selected' if form_data.lead_type == t }}>{{ t or '—' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="purpose">Purpose</label>
+                    <select id="purpose" name="purpose" class="input select">
+                        {% for p in ['', 'buy', 'rent', 'sell', 'let'] %}
+                        <option value="{{ p }}" {{ 'selected' if form_data.purpose == p }}>{{ p or '—' }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="property_type">Property Type</label>
+                    <input type="text" id="property_type" name="property_type" class="input"
+                           value="{{ form_data.property_type or '' }}" placeholder="apartment, villa…">
+                </div>
+                <div class="form-group">
+                    <label for="preferred_location">Preferred Location</label>
+                    <input type="text" id="preferred_location" name="preferred_location" class="input"
+                           value="{{ form_data.preferred_location or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="bedrooms_needed">Bedrooms</label>
+                    <input type="number" id="bedrooms_needed" name="bedrooms_needed" class="input" min="0"
+                           value="{{ form_data.bedrooms_needed if form_data.bedrooms_needed is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="bathrooms_needed">Bathrooms</label>
+                    <input type="number" id="bathrooms_needed" name="bathrooms_needed" class="input" min="0"
+                           value="{{ form_data.bathrooms_needed if form_data.bathrooms_needed is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="budget_min">Budget Min ({{ form_data.currency or CURRENCY }})</label>
+                    <input type="number" id="budget_min" name="budget_min" class="input" min="0"
+                           value="{{ form_data.budget_min if form_data.budget_min is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="budget_max">Budget Max ({{ form_data.currency or CURRENCY }})</label>
+                    <input type="number" id="budget_max" name="budget_max" class="input" min="0"
+                           value="{{ form_data.budget_max if form_data.budget_max is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="budget">Budget (single value, {{ CURRENCY }})</label>
+                    <input type="number" id="budget" name="budget" class="input" min="0"
+                           value="{{ form_data.budget if form_data.budget is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="currency">Currency</label>
+                    <input type="text" id="currency" name="currency" class="input"
+                           value="{{ form_data.currency or CURRENCY }}">
+                </div>
+                <div class="form-group span-2">
+                    <label for="amenities">Amenities (comma separated)</label>
+                    <input type="text" id="amenities" name="amenities" class="input"
+                           value="{{ form_data.amenities or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="timeline_days">Timeline (days)</label>
+                    <input type="number" id="timeline_days" name="timeline_days" class="input" min="0"
+                           value="{{ form_data.timeline_days if form_data.timeline_days is not none else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="timeline_label">Timeline (label)</label>
+                    <input type="text" id="timeline_label" name="timeline_label" class="input"
+                           value="{{ form_data.timeline_label or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="status">Lead Status</label>
+                    <select id="status" name="status" class="input select">
+                        {% for s in ['Analysed', 'New', 'Qualified'] %}
+                        <option value="{{ s }}" {{ 'selected' if form_data.status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="lead_source">Lead Source</label>
+                    <input type="text" id="lead_source" name="lead_source" class="input"
+                           value="{{ form_data.lead_source or 'AI Analysis' }}">
+                </div>
+                <div class="form-group span-2">
+                    <label for="notes">Extra notes / other preferences</label>
+                    <textarea id="notes" name="notes" class="input" rows="3">{{ form_data.notes or '' }}</textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 Save Lead</button>
+                <a href="{{ url_for('analyse_lead_page') }}" class="btn btn-ghost">Analyse another</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

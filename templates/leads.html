@@ -12,8 +12,29 @@
                    value="{{ q or '' }}" aria-label="Search leads" />
             <select name="status" class="input select" aria-label="Status">
                 <option value="" {{ 'selected' if not status }}>Any Status</option>
-                {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
+                {% for s in statuses %}
                     <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+                {% for s in legacy_statuses %}
+                    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <select name="priority" class="input select" aria-label="Priority">
+                <option value="" {{ 'selected' if not priority }}>Any Priority</option>
+                {% for p in ['High', 'Medium', 'Low'] %}
+                    <option value="{{ p }}" {{ 'selected' if priority == p }}>{{ p }}</option>
+                {% endfor %}
+            </select>
+            <select name="lead_type" class="input select" aria-label="Lead type">
+                <option value="" {{ 'selected' if not lead_type }}>Any Lead Type</option>
+                {% for t in lead_type_options %}
+                    <option value="{{ t }}" {{ 'selected' if lead_type == t }}>{{ t|capitalize }}</option>
+                {% endfor %}
+            </select>
+            <select name="assigned" class="input select" aria-label="Assigned agent">
+                <option value="" {{ 'selected' if not assigned }}>Any Agent</option>
+                {% for a in assigned_options %}
+                    <option value="{{ a }}" {{ 'selected' if assigned == a }}>{{ a }}</option>
                 {% endfor %}
             </select>
             <select name="source" class="input select" aria-label="Lead Source">
@@ -41,7 +62,12 @@
             <span class="filter-count">{{ leads|length }} lead{{ '' if leads|length == 1 else 's' }}</span>
         </div>
     </form>
-    <a href="{{ url_for('add_lead_page') }}" class="btn btn-primary">➕ Add Lead</a>
+    <div class="toolbar-actions">
+        {% if can('leads.create') %}
+        <a href="{{ url_for('analyse_lead_page') }}" class="btn btn-gold">✨ Analyse Enquiry</a>
+        {% endif %}
+        <a href="{{ url_for('add_lead_page') }}" class="btn btn-primary">➕ Add Lead</a>
+    </div>
 </div>
 
 <section class="panel">
@@ -62,6 +88,7 @@
                     <th>Beds</th>
                     <th>Source</th>
                     <th>Assigned To</th>
+                    <th>Priority</th>
                     <th>Score</th>
                     <th>Follow-up</th>
                     <th>Status</th>
@@ -74,7 +101,7 @@
                     <td>
                         <div class="name-cell">
                             <span class="client-avatar" aria-hidden="true">{{ l.client_name[:1]|upper }}</span>
-                            <strong>{{ l.client_name }}</strong>
+                            <a href="{{ url_for('lead_detail_page', lead_id=l.id) }}"><strong>{{ l.client_name }}</strong></a>
                         </div>
                     </td>
                     <td>{{ l.phone or '—' }}</td>
@@ -84,6 +111,9 @@
                     <td>{{ l.bedrooms_needed or '—' }}</td>
                     <td>{{ l.lead_source or '—' }}</td>
                     <td>{{ l.assigned_to or '—' }}</td>
+                    <td>
+                        <span class="badge badge-{{ (l.priority or 'Low')|lower }}">{{ l.priority or 'Low' }}</span>
+                    </td>
                     <td>
                         <span class="score-pill score-{{ 'high' if (l.lead_score or 0) >= 70 else ('mid' if (l.lead_score or 0) >= 40 else 'low') }}">
                             {{ l.lead_score or 0 }}
@@ -105,13 +135,16 @@
                     </td>
                     <td>
                         <div class="status-cell">
-                            <span class="badge badge-{{ l.status|lower }}">{{ l.status }}</span>
+                            <span class="badge badge-{{ l.status|lower|replace(' ', '-') }}">{{ l.status }}</span>
                             <form method="post" action="{{ url_for('update_lead_status_page', lead_id=l.id) }}"
                                   class="inline-form status-quick-form">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <select name="status" class="input select status-quick" aria-label="Change status"
                                         onchange="this.form.submit()">
-                                    {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
+                                    {% for s in statuses %}
+                                        <option value="{{ s }}" {{ 'selected' if l.status == s }}>{{ s }}</option>
+                                    {% endfor %}
+                                    {% for s in legacy_statuses %}
                                         <option value="{{ s }}" {{ 'selected' if l.status == s }}>{{ s }}</option>
                                     {% endfor %}
                                 </select>
@@ -119,6 +152,8 @@
                         </div>
                     </td>
                     <td class="actions-cell">
+                        <a href="{{ url_for('lead_detail_page', lead_id=l.id) }}" class="btn btn-ghost btn-xs">View</a>
+                        <a href="{{ url_for('lead_recommendations_page', lead_id=l.id) }}" class="btn btn-ghost btn-xs">Matches</a>
                         <a href="{{ url_for('edit_lead_page', lead_id=l.id) }}" class="btn btn-ghost btn-xs">Edit</a>
                         <form method="post" action="{{ url_for('delete_lead_page', lead_id=l.id) }}"
                               onsubmit="return confirm('Delete {{ l.client_name }}?');" class="inline-form">

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}{{ lead.client_name }}{% endblock %}
+{% block page_title %}{{ lead.client_name }}{% endblock %}
+{% block page_subtitle %}Lead detail · requirements, score &amp; matches{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb">
+    <a href="{{ url_for('leads_page') }}">Leads &amp; Clients</a>
+    <span>/</span>
+    <span>{{ lead.client_name }}</span>
+</nav>
+
+<section class="panel detail-header-panel">
+    <div class="panel-body">
+        <div class="detail-header">
+            <div class="detail-headings">
+                <div class="detail-badges">
+                    <span class="badge badge-{{ lead.status|lower|replace(' ', '-') }}">{{ lead.status }}</span>
+                    <span class="badge badge-{{ (lead.priority or 'Low')|lower }}">Priority: {{ lead.priority or 'Low' }}</span>
+                    <span class="muted">Score {{ lead.lead_score or 0 }}/100</span>
+                    {% if lead.analysed_at %}<span class="muted">Analysed {{ lead.analysed_at }}</span>{% endif %}
+                </div>
+                <h2 class="detail-title">{{ lead.client_name }}</h2>
+                <p class="detail-location">
+                    📍 {{ lead.preferred_location or 'Location not stated' }}
+                    {% if lead.property_type %} · {{ lead.property_type }}{% endif %}
+                    {% if lead.bedrooms_needed %} · {{ lead.bedrooms_needed }} bed{% endif %}
+                </p>
+                <p class="detail-price">
+                    {% if lead.budget_min or lead.budget_max %}
+                        {{ lead.currency or CURRENCY }}
+                        {{ "{:,.0f}".format(lead.budget_min) if lead.budget_min else '' }}
+                        {{ '–' if lead.budget_min and lead.budget_max }}
+                        {{ "{:,.0f}".format(lead.budget_max) if lead.budget_max else '' }}
+                    {% elif lead.budget %}
+                        {{ CURRENCY }} {{ "{:,.0f}".format(lead.budget) }}
+                    {% else %}Budget not stated{% endif %}
+                </p>
+            </div>
+            <div class="detail-actions">
+                {% if can_edit %}
+                <a href="{{ url_for('edit_lead_page', lead_id=lead.id) }}" class="btn btn-primary">✏️ Edit</a>
+                {% endif %}
+                <a href="{{ url_for('lead_recommendations_page', lead_id=lead.id) }}" class="btn btn-gold">🏘 Find Matches</a>
+                <a href="{{ url_for('leads_page') }}" class="btn btn-ghost">← Back</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="two-col">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Requirements</h2>
+            {% if lead.analysis_provider %}<span class="muted small">via {{ lead.analysis_provider }}</span>{% endif %}
+        </div>
+        <div class="panel-body">
+            <div class="spec-grid">
+                <div class="spec-card"><span class="spec-label">Phone</span><span class="spec-value">{{ lead.phone or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Email</span><span class="spec-value">{{ lead.email or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Lead type</span><span class="spec-value">{{ lead.lead_type or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Purpose</span><span class="spec-value">{{ lead.purpose or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Property type</span><span class="spec-value">{{ lead.property_type or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Bedrooms</span><span class="spec-value">{{ lead.bedrooms_needed if lead.bedrooms_needed is not none else '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Bathrooms</span><span class="spec-value">{{ lead.bathrooms_needed if lead.bathrooms_needed is not none else '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Timeline</span>
+                    <span class="spec-value">{{ lead.timeline_label or (lead.timeline_days ~ ' days' if lead.timeline_days is not none else '—') }}</span>
+                </div>
+                <div class="spec-card"><span class="spec-label">Source</span><span class="spec-value">{{ lead.lead_source or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Assigned to</span><span class="spec-value">{{ lead.assigned_to or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Next follow-up</span><span class="spec-value">{{ lead.next_follow_up or '—' }}</span></div>
+                <div class="spec-card"><span class="spec-label">Last contact</span><span class="spec-value">{{ lead.last_contact or '—' }}</span></div>
+            </div>
+
+            {% if lead.amenities %}
+            <p class="muted small" style="margin-top:0.75rem;"><strong>Amenities:</strong> {{ lead.amenities | join(', ') }}</p>
+            {% endif %}
+            {% if lead.missing_fields %}
+            <p class="muted small"><strong>Missing information:</strong>
+                {{ lead.missing_fields | join(', ') }}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Qualification Score</h2>
+            <span class="score-pill score-{{ 'high' if (lead.lead_score or 0) >= 70 else ('mid' if (lead.lead_score or 0) >= 40 else 'low') }}">{{ lead.lead_score or 0 }}</span>
+        </div>
+        <div class="panel-body">
+            {% if lead.score_breakdown %}
+            <ul class="muted small">
+                {% for item in lead.score_breakdown %}
+                <li>
+                    <strong>{{ item.label }}</strong> —
+                    {{ item.awarded }}/{{ item.points }}
+                    <span class="muted">({{ item.reason }})</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="muted small">No score breakdown recorded (legacy lead).</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+
+<section class="panel">
+    <div class="panel-header"><h2>Status</h2></div>
+    <div class="panel-body">
+        {% if can_edit %}
+        <form method="post" action="{{ url_for('update_lead_status_page', lead_id=lead.id) }}" class="filter-actions">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="status" class="input select" aria-label="Change status">
+                {% for s in statuses %}
+                <option value="{{ s }}" {{ 'selected' if lead.status == s }}>{{ s }}</option>
+                {% endfor %}
+                {% for s in legacy_statuses %}
+                <option value="{{ s }}" {{ 'selected' if lead.status == s }}>{{ s }} (legacy)</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+        </form>
+        {% else %}
+        <p><span class="badge badge-{{ lead.status|lower|replace(' ', '-') }}">{{ lead.status }}</span></p>
+        {% endif %}
+
+        {% if history %}
+        <h3 style="margin-top:1rem;">Status history</h3>
+        <ul class="muted small">
+            {% for h in history %}
+            <li>{{ h.changed_at }} — {{ h.from_status or '∅' }} → <strong>{{ h.to_status }}</strong>
+                {% if h.changed_by %}<span class="muted">by {{ h.changed_by }}</span>{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Recommendations</h2>
+        <a href="{{ url_for('lead_recommendations_page', lead_id=lead.id) }}" class="link">Open match screen →</a>
+    </div>
+    <div class="panel-body">
+        {% if recommendations %}
+        <div class="mini-list">
+            {% for rec in recommendations %}
+            <div class="spec-card" style="margin-bottom:0.6rem;">
+                <span class="spec-label">Match score {{ rec.match_score }}/100</span>
+                <span class="spec-value">
+                    {% if rec.property_id %}<a href="{{ url_for('property_detail_page', property_id=rec.property_id) }}">{{ rec.snapshot.get('name', 'Property #' ~ rec.property_id) }}</a>{% else %}{{ rec.snapshot.get('name', 'Property') }}{% endif %}
+                </span>
+                <span class="muted small">{{ rec.snapshot.get('location', '') }}
+                    {% if rec.snapshot.get('price') %} · {{ CURRENCY }} {{ "{:,.0f}".format(rec.snapshot.get('price')) }}{% endif %}</span>
+                {% if rec.reasons %}<span class="muted small">✔ {{ rec.reasons | join('; ') }}</span>{% endif %}
+                {% if rec.mismatches %}<span class="muted small">⚠ {{ rec.mismatches | join('; ') }}</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted small">No recommendations yet.
+            <form method="post" action="{{ url_for('lead_recommendations_page', lead_id=lead.id) }}" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-gold btn-sm">🏘 Generate matches</button>
+            </form>
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header"><h2>Follow-up Notes</h2></div>
+    <div class="panel-body">
+        {% if can_edit %}
+        <form method="post" action="{{ url_for('add_lead_note_page', lead_id=lead.id) }}" class="crm-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label for="body">Add a note</label>
+                <textarea id="body" name="body" class="input" rows="3" required
+                          placeholder="Call summary, next steps, client feedback…"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">➕ Add Note</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if notes %}
+        <ul class="muted small" style="margin-top:1rem;">
+            {% for note in notes %}
+            <li><strong>{{ note.author or 'System' }}</strong> · {{ note.created_at }}<br>{{ note.body }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted small">No notes yet.</p>
+        {% endif %}
+    </div>
+</section>
+
+{% if lead.raw_enquiry %}
+<section class="panel">
+    <div class="panel-header"><h2>Original Enquiry</h2></div>
+    <div class="panel-body">
+        <blockquote class="muted small" style="white-space:pre-wrap; border-left:3px solid var(--border); padding-left:0.9rem; margin:0;">{{ lead.raw_enquiry }}</blockquote>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

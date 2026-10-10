@@ -82,6 +82,49 @@
         </div>
     </a>
 
+    <a href="{{ url_for('leads_page') }}" class="stat-card stat-blue">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"></path>
+                <circle cx="12" cy="12" r="3.2"></circle>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(stats.analysed_leads) }}</span>
+            <span class="stat-label">Analysed Leads</span>
+            <span class="stat-sub">Requirements extracted by AI</span>
+        </div>
+    </a>
+
+    <a href="{{ url_for('leads_page', priority='High') }}" class="stat-card stat-red">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3 3 20h18L12 3Z"></path>
+                <path d="M12 10v4M12 17h.01"></path>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(stats.high_priority_leads) }}</span>
+            <span class="stat-label">High-Priority Leads</span>
+            <span class="stat-sub">Score 70 and above</span>
+        </div>
+    </a>
+
+    <a href="{{ url_for('leads_page', status='Property Matched') }}" class="stat-card stat-green">
+        <div class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 11 12 4l8 7"></path>
+                <path d="M6 10v9h12v-9"></path>
+                <path d="m9.5 14 2 2 3.5-4"></path>
+            </svg>
+        </div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(stats.matched_leads) }}</span>
+            <span class="stat-label">Property Matched</span>
+            <span class="stat-sub">Leads with recommendations</span>
+        </div>
+    </a>
+
     <div class="stat-card stat-gold">
         <div class="stat-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -117,6 +160,9 @@
     <div class="action-row">
         <a href="{{ url_for('add_property_page') }}" class="action-btn action-primary">➕ Add Property</a>
         <a href="{{ url_for('add_lead_page') }}" class="action-btn action-secondary">👤 Add Lead</a>
+        {% if can('leads.create') %}
+        <a href="{{ url_for('analyse_lead_page') }}" class="action-btn action-ai">✨ Analyse Enquiry</a>
+        {% endif %}
         <a href="{{ url_for('assistant_page') }}" class="action-btn action-ai">🤖 Ask the AI</a>
         <a href="{{ url_for('properties_page') }}" class="action-btn action-secondary">🏢 Browse Properties</a>
         <a href="{{ url_for('leads_page') }}" class="action-btn action-secondary">📋 View Leads</a>
@@ -367,4 +413,33 @@
         </div>
     </section>
 </div>
+
+<!-- ===== RECENT RECOMMENDATIONS ===== -->
+<section class="panel">
+    <div class="panel-header">
+        <h2>Recent Recommendations</h2>
+        <a href="{{ url_for('leads_page') }}" class="link">View leads →</a>
+    </div>
+    <div class="panel-body">
+        {% if recent_recommendations %}
+        <div class="mini-list">
+            {% for rec in recent_recommendations %}
+            <div class="mini-item">
+                <div class="mini-info">
+                    <strong>{{ rec.lead_name or ('Lead #' ~ rec.lead_id) }}</strong>
+                    <span class="muted">{{ rec.property_name or rec.snapshot.get('name', 'Property') }}
+                        {% if rec.property_location %}· {{ rec.property_location }}{% endif %}</span>
+                </div>
+                <div class="mini-meta">
+                    <span class="badge badge-{{ 'high' if rec.match_score >= 70 else ('medium' if rec.match_score >= 40 else 'low') }}">{{ rec.match_score }}/100</span>
+                    <span class="muted">{{ rec.created_at }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No recommendations yet. <a href="{{ url_for('leads_page') }}">Analyse a lead</a> and generate matches.</p>
+        {% endif %}
+    </div>
+</section>
 {% endblock %}

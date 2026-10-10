@@ -75,7 +75,10 @@
                 <div class="form-group">
                     <label for="status">Lead Status</label>
                     <select id="status" name="status" class="input select">
-                        {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
+                        {% for s in statuses %}
+                            <option value="{{ s }}" {{ 'selected' if lead and lead.status == s }}>{{ s }}</option>
+                        {% endfor %}
+                        {% for s in legacy_statuses %}
                             <option value="{{ s }}" {{ 'selected' if lead and lead.status == s }}>{{ s }}</option>
                         {% endfor %}
                     </select>

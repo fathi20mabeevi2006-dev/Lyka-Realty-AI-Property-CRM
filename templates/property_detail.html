@@ -97,6 +97,18 @@
                     <span class="spec-value">{{ CURRENCY }} {{ "{:,.0f}".format(property.price) }}</span>
                 </div>
                 <div class="spec-card">
+                    <span class="spec-label">Listing Purpose</span>
+                    <span class="spec-value">
+                        {% if listing_kind == 'sale' %}
+                            <span class="pill pill-yes">{{ listing_label }}</span>
+                        {% elif listing_kind == 'rent' %}
+                            <span class="badge badge-rented">{{ listing_label }}</span>
+                        {% else %}
+                            <span class="pill pill-no">{{ listing_label }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="spec-card">
                     <span class="spec-label">Status</span>
                     <span class="spec-value">
                         <span class="badge badge-{{ property.status|lower }}">{{ property.status }}</span>

@@ -66,3 +66,15 @@ CURRENCY = _normalize_currency(os.getenv("CURRENCY"))
 # --- Optional external AI (Groq) ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b").strip()
+
+# --- Optional external AI (official OpenAI SDK) ---
+# Only ever read server-side; never sent to the browser. When the key is
+# absent the lead-analysis service falls back to Groq, then to the offline
+# extractor (see services/ai_extract.py).
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+
+# --- AI request limits ---
+AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "25"))
+AI_ANALYSIS_RATE_LIMIT = int(os.getenv("AI_ANALYSIS_RATE_LIMIT", "10"))
+AI_ANALYSIS_RATE_WINDOW = int(os.getenv("AI_ANALYSIS_RATE_WINDOW", "60"))

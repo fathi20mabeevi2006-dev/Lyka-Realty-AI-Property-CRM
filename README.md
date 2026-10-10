@@ -11,7 +11,9 @@ It includes property management, lead tracking, a responsive dashboard, and an *
 |--------|--------------|
 | **Dashboard** | Total / Available / Sold / Rented properties + total leads, with recent activity |
 | **Properties** | Add, edit, delete, a **details page** per property, **advanced filters** (location, price, beds, baths, pool, metro, view, status) applied instantly, and **multi-image upload** with gallery + list thumbnails. Stores name, location, price, bedrooms, bathrooms, **floor number, property view, swimming pool (Y/N), nearby metro (Y/N)**, status |
-| **Leads & Clients** | Add, edit, delete clients with budget, location, requirements & status |
+| **Leads & Clients** | Add, edit, delete clients with budget, location, requirements & status. **Lead detail** page shows requirements, qualification score + priority, status history, and follow-up notes |
+| **AI Lead Analysis** | Paste a free-text enquiry at `/leads/analyse`; the backend extracts structured requirements (beds, budget, location, amenities, timeline), flags missing information with clarification questions, and saves it as a new lead. Uses `openai → groq → offline` providers with strict schema validation. **Never invents values** and never presents the offline fallback as live AI |
+| **Qualification & Matching** | Every lead gets a transparent 0–100 qualification score with a high/medium/low priority and a per-rule breakdown. One click generates **top-3 property recommendations** from your real listings, with match score, reasons and mismatches — honest "no match" when nothing fits |
 | **AI Assistant** | Chat page whose answers are **grounded in your live CRM database**. Uses the Groq LLM when `GROQ_API_KEY` is set, and automatically falls back to the built-in offline rule-based answers if Groq is missing or unreachable. Searches by city, bedrooms, pool, metro, price & status |
 | **Business Analysis** | Record your company profile, business model, objectives, customers, workflows, software, challenges and risks as **facts, assumptions and recommendations** with category/source/status filters |
 | **Requirements & Gap Analysis** | Track functional / non-functional requirements with priority, status, owner, acceptance criteria, dependencies and risks. Compare **current state vs desired state** to automatically flag gaps, sorted by priority |
@@ -54,6 +56,19 @@ python seed_data.py
 ```
 
 This adds 18 sample properties and 8 sample leads so the dashboard and AI Assistant have something to show.
+
+To try the **property matching** engine, also load the clearly-labelled demo
+listings (both Sale and Rent, marked `is_demo = 1`):
+
+```bash
+python seed_demo_properties.py
+```
+
+It is idempotent and additive — it never touches your imported rows. Remove them
+any time with `DELETE FROM properties WHERE is_demo = 1`.
+
+See `.env.example` for the full list of supported environment variables
+(OpenAI/Groq keys, models, timeouts and rate limits).
 
 ### 4. Run the app
 

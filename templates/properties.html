@@ -1,148 +1,281 @@
 {% extends "base.html" %}
 {% block title %}Properties{% endblock %}
 {% block page_title %}Properties{% endblock %}
-{% block page_subtitle %}Manage your property listings{% endblock %}
+{% block page_subtitle %}Discover premium homes and investment opportunities across Dubai &amp; the UAE{% endblock %}
 
 {% block content %}
-<div class="toolbar">
-    <form method="get" class="filter-panel" id="filterForm">
-        <div class="filter-panel-title">🔎 Filter Listings</div>
-        <div class="filter-grid">
-            <input type="text" name="q" class="input" placeholder="🔍 Search name or location…"
-                   value="{{ q or '' }}" aria-label="Search" />
-            <input type="text" name="location" class="input" placeholder="📍 Location…"
-                   value="{{ location or '' }}" aria-label="Location" />
-            <select name="status" class="input select" aria-label="Status">
-                <option value="" {{ 'selected' if not status }}>Any Status</option>
-                <option value="Available" {{ 'selected' if status == 'Available' }}>Available</option>
-                <option value="Sold" {{ 'selected' if status == 'Sold' }}>Sold</option>
-                <option value="Rented" {{ 'selected' if status == 'Rented' }}>Rented</option>
-            </select>
-            <select name="view" class="input select" aria-label="Property View">
-                <option value="" {{ 'selected' if not view }}>Any View</option>
-                {% set views = ['Sea View', 'City View', 'Beach View', 'Garden View',
-                                'Lake View', 'Pool View', 'Canal View', 'Market View',
-                                'Street View', 'Forest View', 'Hill View'] %}
-                {% for v in views %}
-                    <option value="{{ v }}" {{ 'selected' if view == v }}>{{ v }}</option>
-                {% endfor %}
-                <option value="None" {{ 'selected' if view == 'None' }}>None (no view)</option>
-            </select>
-            <input type="number" name="min_price" class="input" placeholder="Min price {{ CURRENCY }}" min="0"
-                   value="{{ min_price or '' }}" aria-label="Minimum price" />
-            <input type="number" name="max_price" class="input" placeholder="Max price {{ CURRENCY }}" min="0"
-                   value="{{ max_price or '' }}" aria-label="Maximum price" />
-            <select name="bedrooms" class="input select" aria-label="Bedrooms">
-                <option value="" {{ 'selected' if not bedrooms }}>Any Beds</option>
-                {% for n in range(0, 11) %}
-                    <option value="{{ n }}" {{ 'selected' if bedrooms == n|string }}>{{ n }} bed{{ 's' if n != 1 }}</option>
-                {% endfor %}
-            </select>
-            <select name="bathrooms" class="input select" aria-label="Bathrooms">
-                <option value="" {{ 'selected' if not bathrooms }}>Any Baths</option>
-                {% for n in range(0, 11) %}
-                    <option value="{{ n }}" {{ 'selected' if bathrooms == n|string }}>{{ n }} bath{{ 's' if n != 1 }}</option>
-                {% endfor %}
-            </select>
-            <select name="pool" class="input select" aria-label="Swimming Pool">
-                <option value="" {{ 'selected' if not pool }}>Pool: Any</option>
-                <option value="Yes" {{ 'selected' if pool == 'Yes' }}>Pool: Yes</option>
-                <option value="No" {{ 'selected' if pool == 'No' }}>Pool: No</option>
-            </select>
-            <select name="metro" class="input select" aria-label="Nearby Metro">
-                <option value="" {{ 'selected' if not metro }}>Metro: Any</option>
-                <option value="Yes" {{ 'selected' if metro == 'Yes' }}>Metro: Yes</option>
-                <option value="No" {{ 'selected' if metro == 'No' }}>Metro: No</option>
-            </select>
-        </div>
-        <div class="filter-actions">
-            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
-            <a href="{{ url_for('properties_page') }}" class="btn btn-ghost btn-sm" id="clearFilters">Clear all</a>
-            <span class="filter-count" id="resultCount">
-                {{ properties|length }} propert{{ 'y' if properties|length == 1 else 'ies' }}
-            </span>
-        </div>
-    </form>
-    <a href="{{ url_for('add_property_page') }}" class="btn btn-primary">➕ Add Property</a>
-</div>
+{# ---- one shared icon sprite keeps 6,000+ cards light ---- #}
+<svg class="property-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"></path>
+        <circle cx="12" cy="10" r="3"></circle>
+    </symbol>
+    <symbol id="i-bed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 4v16"></path>
+        <path d="M2 9h16a3 3 0 0 1 3 3v8"></path>
+        <path d="M2 17h19"></path>
+        <path d="M6 9V6h6v3"></path>
+    </symbol>
+    <symbol id="i-bath" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12h16v3a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-3Z"></path>
+        <path d="M7 12V5.5A1.5 1.5 0 0 1 8.5 4h.5"></path>
+        <path d="M6 18l1.4-1.4"></path>
+    </symbol>
+    <symbol id="i-area" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+        <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+        <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+        <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+    </symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z"></path>
+    </symbol>
+</svg>
 
-<section class="panel">
-    <div class="panel-header">
-        <h2>Listings</h2>
-        <span class="muted">{{ properties|length }} result{{ '' if properties|length == 1 else 's' }}</span>
-    </div>
-    <div class="panel-body">
-        {% if properties %}
-        <div class="property-grid" id="propertiesGrid">
-            {% for p in properties %}
-            <article class="property-card"
-                     data-name="{{ p.name }}"
-                     data-location="{{ p.location }}"
-                     data-price="{{ p.price }}"
-                     data-bedrooms="{{ p.bedrooms }}"
-                     data-bathrooms="{{ p.bathrooms }}"
-                     data-pool="{{ p.has_swimming_pool }}"
-                     data-metro="{{ p.nearby_metro }}"
-                     data-view="{{ p.property_view or '' }}"
-                     data-status="{{ p.status }}">
-                <a class="property-thumb" href="{{ url_for('property_detail_page', property_id=p.id) }}"
-                   aria-label="View {{ p.name }}">
-                    {% if p.thumbnail %}
-                        <img class="property-thumb-img"
-                             src="{{ url_for('static', filename='uploads/properties/' ~ p.thumbnail) }}"
-                             alt="Photo of {{ p.name }}" loading="lazy" />
-                    {% else %}
-                        {% set _nm = (p.name or '')|lower %}
-                        {% set _nt = (((p.property_view or '') ~ ' ' ~ (p.location or '')) )|lower %}
-                        {% if 'villa' in _nm and 'village' not in _nm %}
-                            {% set _sample = 'sample-villa.svg' %}
-                        {% elif 'penthouse' in _nm or 'tower' in _nm or 'highrise' in _nm or 'hi-rise' in _nm %}
-                            {% set _sample = 'sample-tower.svg' %}
-                        {% elif 'beach' in _nt or 'sea' in _nt or 'marina' in _nt or 'waterfront' in _nt or 'seafront' in _nt %}
-                            {% set _sample = 'sample-beachfront.svg' %}
-                        {% else %}
-                            {% set _sample = 'sample-apartment.svg' %}
-                        {% endif %}
-                        <img class="property-thumb-img"
-                             src="{{ url_for('static', filename='img/samples/' ~ _sample) }}"
-                             alt="Sample illustration of {{ p.name }}" loading="lazy" />
-                        <span class="property-thumb-sample">Sample</span>
-                    {% endif %}
-                    <span class="property-status-badge">
-                        <span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span>
-                    </span>
-                </a>
-                <div class="property-card-body">
-                    <h3 class="property-name">
-                        <a href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
-                    </h3>
-                    <p class="property-location">📍 {{ p.location }}</p>
-                    <p class="property-price">{{ CURRENCY }} {{ "{:,.0f}".format(p.price) }}</p>
-                    <div class="property-meta">
-                        <span>🛏 {{ p.bedrooms }} bed{{ '' if p.bedrooms == 1 else 's' }}</span>
-                        <span>🛁 {{ p.bathrooms }} bath{{ '' if p.bathrooms == 1 else 's' }}</span>
-                    </div>
-                    <div class="property-actions">
-                        <a href="{{ url_for('edit_property_page', property_id=p.id) }}" class="btn btn-ghost btn-xs">✏️ Edit</a>
-                        <form method="post" action="{{ url_for('delete_property_page', property_id=p.id) }}"
-                              onsubmit="return confirm('Delete {{ p.name }}?');" class="inline-form">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-danger btn-xs">🗑 Delete</button>
-                        </form>
-                    </div>
+{# ================= Filters: search + type + location + price + beds ===== #}
+<div class="listing-toolbar">
+    <form method="get" class="filter-panel" id="filterForm">
+        <div class="filter-panel-title">🔎 Search &amp; Filter Listings</div>
+
+        <div class="listing-search">
+            <label class="sr-only" for="fq">Search properties</label>
+            <svg class="listing-search__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-3.2-3.2"></path>
+            </svg>
+            <input type="search" id="fq" name="q" class="input listing-search__input"
+                   placeholder="Search by property name, location or keyword…"
+                   value="{{ q or '' }}" aria-label="Search properties" />
+        </div>
+
+        <div class="filter-grid listing-filters">
+            <div class="filter-field">
+                <label for="ftype">Property Type</label>
+                <select id="ftype" name="type" class="input select">
+                    <option value="" {{ 'selected' if not type }}>Any Type</option>
+                    {% for t in property_types %}
+                    <option value="{{ t }}" {{ 'selected' if type == t }}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="flocation">Location</label>
+                <input type="text" id="flocation" name="location" class="input"
+                       placeholder="e.g. Dubai Marina" value="{{ location or '' }}" />
+            </div>
+
+            <div class="filter-field filter-field--price">
+                <label for="fmin_price">Price Range</label>
+                <div class="price-range">
+                    <input type="number" id="fmin_price" name="min_price" class="input"
+                           placeholder="Min" min="0" value="{{ min_price or '' }}"
+                           aria-label="Minimum price in {{ CURRENCY }}" />
+                    <span class="price-range__sep" aria-hidden="true">–</span>
+                    <input type="number" name="max_price" class="input"
+                           placeholder="Max" min="0" value="{{ max_price or '' }}"
+                           aria-label="Maximum price in {{ CURRENCY }}" />
                 </div>
-            </article>
-            {% endfor %}
-            <div id="filterEmpty" class="property-empty" role="status" style="display:none;">
-                <p>🔍 No properties match the current filters. Try adjusting or
-                    <a href="{{ url_for('properties_page') }}">clearing all filters</a>.</p>
+            </div>
+
+            <div class="filter-field">
+                <label for="fbedrooms">Bedrooms</label>
+                <select id="fbedrooms" name="bedrooms" class="input select">
+                    <option value="" {{ 'selected' if not bedrooms }}>Any Beds</option>
+                    {% for n in range(0, 11) %}
+                    <option value="{{ n }}" {{ 'selected' if bedrooms == n|string }}>{{ n }} bed{{ 's' if n != 1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="fstatus">Status</label>
+                <select id="fstatus" name="status" class="input select">
+                    <option value="" {{ 'selected' if not status }}>Any Status</option>
+                    <option value="Available" {{ 'selected' if status == 'Available' }}>Available</option>
+                    <option value="Sold" {{ 'selected' if status == 'Sold' }}>Sold</option>
+                    <option value="Rented" {{ 'selected' if status == 'Rented' }}>Rented</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="fbathrooms">Bathrooms</label>
+                <select id="fbathrooms" name="bathrooms" class="input select">
+                    <option value="" {{ 'selected' if not bathrooms }}>Any Baths</option>
+                    {% for n in range(0, 11) %}
+                    <option value="{{ n }}" {{ 'selected' if bathrooms == n|string }}>{{ n }} bath{{ 's' if n != 1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="fview">Property View</label>
+                <select id="fview" name="view" class="input select">
+                    <option value="" {{ 'selected' if not view }}>Any View</option>
+                    {% set views = ['Sea View', 'City View', 'Beach View', 'Garden View',
+                                    'Lake View', 'Pool View', 'Canal View', 'Market View',
+                                    'Street View', 'Forest View', 'Hill View'] %}
+                    {% for v in views %}
+                    <option value="{{ v }}" {{ 'selected' if view == v }}>{{ v }}</option>
+                    {% endfor %}
+                    <option value="None" {{ 'selected' if view == 'None' }}>None (no view)</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="fpool">Swimming Pool</label>
+                <select id="fpool" name="pool" class="input select">
+                    <option value="" {{ 'selected' if not pool }}>Pool: Any</option>
+                    <option value="Yes" {{ 'selected' if pool == 'Yes' }}>Pool: Yes</option>
+                    <option value="No" {{ 'selected' if pool == 'No' }}>Pool: No</option>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="fmetro">Nearby Metro</label>
+                <select id="fmetro" name="metro" class="input select">
+                    <option value="" {{ 'selected' if not metro }}>Metro: Any</option>
+                    <option value="Yes" {{ 'selected' if metro == 'Yes' }}>Metro: Yes</option>
+                    <option value="No" {{ 'selected' if metro == 'No' }}>Metro: No</option>
+                </select>
             </div>
         </div>
-        {% else %}
-        <p class="empty-state">No properties found. <a href="{{ url_for('add_property_page') }}">Add a property</a> or try clearing filters.</p>
-        {% endif %}
+
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
+            <a href="{{ url_for('properties_page') }}" class="btn btn-ghost btn-sm" id="clearFilters">↺ Reset</a>
+        </div>
+    </form>
+
+    <a href="{{ url_for('add_property_page') }}" class="btn btn-gold listing-add">
+        ➕ Add Property
+    </a>
+</div>
+
+{# ================= Listing grid ========================================== #}
+<div class="listing-grid-head">
+    <h2 class="listing-grid-title">Available Properties</h2>
+    <span class="listing-count" id="resultCount">
+        {{ properties|length }} propert{{ 'y' if properties|length == 1 else 'ies' }}
+    </span>
+</div>
+
+{% if properties %}
+<div class="property-grid" id="propertiesGrid">
+    {% for p in properties %}
+    <article class="property-card"
+             data-name="{{ p.name }}"
+             data-location="{{ p.location }}"
+             data-price="{{ p.price }}"
+             data-bedrooms="{{ p.bedrooms }}"
+             data-bathrooms="{{ p.bathrooms }}"
+             data-pool="{{ p.has_swimming_pool }}"
+             data-metro="{{ p.nearby_metro }}"
+             data-view="{{ p.property_view or '' }}"
+             data-type="{{ p.property_type or '' }}"
+             data-status="{{ p.status }}">
+
+        <div class="property-thumb">
+            <a class="property-thumb-link" href="{{ url_for('property_detail_page', property_id=p.id) }}"
+               aria-label="View {{ p.name }}">
+                {% if p.thumbnail %}
+                <img class="property-thumb-img" width="1600" height="900"
+                     src="{{ url_for('static', filename='uploads/properties/' ~ p.thumbnail) }}"
+                     data-fallback="{{ url_for('static', filename='img/properties/' ~ p.image_file) }}"
+                     alt="Photo of {{ p.name }}" loading="lazy" decoding="async" />
+                {% else %}
+                <img class="property-thumb-img" width="1600" height="900"
+                     src="{{ url_for('static', filename='img/properties/' ~ p.image_file) }}"
+                     alt="{{ p.name }} — {{ p.location }}" loading="lazy" decoding="async" />
+                {% endif %}
+            </a>
+
+            {# ---- badges: status + highlight ---- #}
+            <div class="property-status-badge">
+                {% if p.highlight %}
+                <span class="badge badge-highlight badge-{{ p.highlight|lower|replace(' ', '-') }}">{{ p.highlight }}</span>
+                {% endif %}
+                <span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span>
+            </div>
+
+            {# ---- favourite ---- #}
+            <button type="button" class="property-fav" data-fav="{{ p.id }}"
+                    aria-pressed="false"
+                    aria-label="Save {{ p.name }} to favourites">
+                <svg class="property-fav__icon" aria-hidden="true" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="1.9"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <use href="#i-heart"></use>
+                </svg>
+            </button>
+
+            {# ---- deal label ---- #}
+            <span class="property-deal is-{{ p.listing_kind }}">{{ p.listing_label }}</span>
+        </div>
+
+        <div class="property-card-body">
+            <h3 class="property-name">
+                <a href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
+            </h3>
+
+            <p class="property-location">
+                <svg class="property-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-pin"></use></svg>
+                <span>{{ p.location }}</span>
+            </p>
+
+            <p class="property-price">
+                <span class="property-price__cur" aria-hidden="true">{{ CURRENCY }}</span>
+                <span class="property-price__value">{{ "{:,.0f}".format(p.price) }}</span>
+            </p>
+
+            <ul class="property-meta">
+                <li>
+                    <svg class="property-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-bed"></use></svg>
+                    {{ p.bedrooms }} Bed{{ '' if p.bedrooms == 1 else 's' }}
+                </li>
+                <li>
+                    <svg class="property-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-bath"></use></svg>
+                    {{ p.bathrooms }} Bath{{ '' if p.bathrooms == 1 else 's' }}
+                </li>
+                {% if p.size_sqm is not none %}
+                <li>
+                    <svg class="property-icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-area"></use></svg>
+                    {{ "{:,.0f}".format(p.size_sqm) }} sqm
+                </li>
+                {% endif %}
+            </ul>
+
+            <div class="property-actions">
+                <a href="{{ url_for('property_detail_page', property_id=p.id) }}"
+                   class="btn btn-gold btn-sm property-cta">View Details</a>
+                <a href="{{ url_for('edit_property_page', property_id=p.id) }}"
+                   class="btn btn-ghost btn-xs">✏️ Edit</a>
+                <form method="post" class="inline-form"
+                      action="{{ url_for('delete_property_page', property_id=p.id) }}"
+                      onsubmit='return confirm({{ ("Delete " ~ p.name ~ "?")|tojson }});'>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-ghost btn-xs property-delete">🗑 Delete</button>
+                </form>
+            </div>
+        </div>
+    </article>
+    {% endfor %}
+
+    <div id="filterEmpty" class="property-empty" role="status" style="display:none;">
+        <p>🔍 No properties match the current filters. Try adjusting them or
+            <a href="{{ url_for('properties_page') }}">resetting all filters</a>.</p>
     </div>
-</section>
+</div>
+{% else %}
+<p class="empty-state">No properties found.
+    <a href="{{ url_for('add_property_page') }}">Add a property</a> or try resetting filters.</p>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
