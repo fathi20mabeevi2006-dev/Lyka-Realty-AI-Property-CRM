@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Gap Analysis{% endblock %}
+{% block page_title %}Gap Analysis{% endblock %}
+{% block page_subtitle %}
+Compare the documented current process with the desired process
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== Summary cards ===== -->
+<section class="stat-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon" aria-hidden="true">📋</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(view.total) }}</span>
+            <span class="stat-label">Total Requirements</span>
+            <span class="stat-sub">Documented in the requirements module</span>
+        </div>
+    </div>
+    <div class="stat-card stat-red">
+        <div class="stat-icon" aria-hidden="true">🔍</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(view.gap_count) }}</span>
+            <span class="stat-label">Identified Gaps</span>
+            <span class="stat-sub">Current state differs from desired</span>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon" aria-hidden="true">✅</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(view.total - view.gap_count) }}</span>
+            <span class="stat-label">No Gap Found</span>
+            <span class="stat-sub">Current matches desired (or not yet specified)</span>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon" aria-hidden="true">🏁</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_status.get('Done', 0)) }}</span>
+            <span class="stat-label">Done</span>
+            <span class="stat-sub">Completed requirements</span>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Filters ===== -->
+<div class="toolbar">
+    <form method="get" class="filter-panel" id="gapFilterForm">
+        <div class="filter-panel-title">🔎 Filter gap view</div>
+        <div class="filter-grid">
+            <select name="req_type" class="input select" aria-label="Type">
+                <option value="" {{ 'selected' if not req_type }}>Any Type</option>
+                {% for t in req_types %}
+                    <option value="{{ t }}" {{ 'selected' if req_type == t }}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            <select name="priority" class="input select" aria-label="Priority">
+                <option value="" {{ 'selected' if not priority }}>Any Priority</option>
+                {% for p in priorities %}
+                    <option value="{{ p }}" {{ 'selected' if priority == p }}>{{ p }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="input select" aria-label="Status">
+                <option value="" {{ 'selected' if not status }}>Any Status</option>
+                {% for s in statuses %}
+                    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <label class="input filter-check">
+                <input type="checkbox" name="only_gaps" value="1" {{ 'checked' if only_gaps }} />
+                Only show gaps
+            </label>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
+            <a href="{{ url_for('gap_analysis_page') }}" class="btn btn-ghost btn-sm">Clear all</a>
+            <span class="filter-count">{{ items|length }} shown</span>
+        </div>
+    </form>
+    <a href="{{ url_for('add_requirement_page') }}" class="btn btn-primary">➕ Add Requirement</a>
+</div>
+
+<!-- ===== Gap list ===== -->
+<section class="panel">
+    <div class="panel-header">
+        <h2>Process Comparison</h2>
+        <span class="muted">{{ items|length }} requirement{{ '' if items|length == 1 else 's' }}</span>
+    </div>
+    <div class="panel-body">
+        {% if items %}
+        <div class="mini-list">
+            {% for r in items %}
+            <article class="mini-item gap-item">
+                <div class="mini-info" style="flex:1;">
+                    <div class="mini-meta" style="margin-bottom:0.35rem;">
+                        <span class="badge {{ 'badge-gap' if r.has_gap else 'badge-no-gap' }}">
+                            {{ 'Gap identified' if r.has_gap else 'No gap found' }}
+                        </span>
+                        <span class="badge badge-{{ r.priority|lower }}">{{ r.priority }}</span>
+                        <span class="badge badge-{{ r.req_type|lower|replace('-', '-') }}">{{ r.req_type }}</span>
+                        <span class="badge badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span>
+                        {% if r.owner %}<span class="muted">· {{ r.owner }}</span>{% endif %}
+                    </div>
+                    <strong>
+                        <a class="row-link" href="{{ url_for('edit_requirement_page', req_id=r.id) }}">{{ r.title }}</a>
+                    </strong>
+                    {% if r.problem or r.proposed_solution %}
+                    <p class="muted small" style="margin-top:0.3rem;">
+                        {% if r.problem %}<strong>Problem:</strong> {{ r.problem }}{% endif %}
+                        {% if r.problem and r.proposed_solution %} · {% endif %}
+                        {% if r.proposed_solution %}<strong>Solution:</strong> {{ r.proposed_solution }}{% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="gap-block" style="flex:1; margin-top:0.6rem; min-width:100%;">
+                    <div class="gap-col gap-col-current">
+                        <span class="gap-col-label">Current state</span>
+                        {{ r.current_state or '— not documented —' }}
+                    </div>
+                    <div class="gap-col gap-col-desired">
+                        <span class="gap-col-label">Desired state</span>
+                        {{ r.desired_state or '— not documented —' }}
+                    </div>
+                </div>
+                {% if r.gap_notes %}
+                <div class="muted small" style="margin-top:0.6rem;">
+                    <strong>Gap notes:</strong> {{ r.gap_notes }}
+                </div>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">
+            No requirements match the current filters.
+            <a href="{{ url_for('add_requirement_page') }}">Add a requirement</a>
+            and fill in the current and desired state to start comparing processes.
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

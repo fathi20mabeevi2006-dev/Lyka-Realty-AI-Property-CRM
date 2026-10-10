@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Note' if action == 'edit' else 'Add Business Note' }}{% endblock %}
+{% block page_title %}{{ 'Edit Note' if action == 'edit' else 'Add Business Note' }}{% endblock %}
+{% block page_subtitle %}
+Entered <strong>facts</strong> are kept separate from <strong>assumptions</strong> and <strong>recommendations</strong>
+{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+    <div class="panel-body">
+        <form method="post" class="crm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="category">Category <span class="req">*</span></label>
+                    <select id="category" name="category" class="input select">
+                        {% set current_cat = entry.category if entry else 'Company Profile' %}
+                        {% for c in categories %}
+                            <option value="{{ c }}" {{ 'selected' if current_cat == c }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="source_type">Source Type <span class="req">*</span></label>
+                    <select id="source_type" name="source_type" class="input select">
+                        {% set current_src = entry.source_type if entry else 'Fact' %}
+                        {% for s in source_types %}
+                            <option value="{{ s }}" {{ 'selected' if current_src == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="muted small">Fact = confirmed · Assumption = unverified · Recommendation = suggested action</span>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="title">Title <span class="req">*</span></label>
+                    <input type="text" id="title" name="title" class="input"
+                           value="{{ entry.title if entry else '' }}"
+                           placeholder="e.g. Primary target market: mid-budget Dubai buyers" required />
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="details">Details</label>
+                    <textarea id="details" name="details" class="input" rows="6"
+                              placeholder="Describe the finding in detail…">{{ entry.details if entry else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status" class="input select">
+                        {% set current_status = entry.status if entry else 'Draft' %}
+                        {% for s in statuses %}
+                            <option value="{{ s }}" {{ 'selected' if current_status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="created_by">Recorded by</label>
+                    <input type="text" id="created_by" name="created_by" class="input"
+                           value="{{ (entry.created_by if entry else '') or 'local' }}" />
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    {{ '💾 Save Changes' if action == 'edit' else '➕ Add Note' }}
+                </button>
+                <a href="{{ url_for('business_page') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

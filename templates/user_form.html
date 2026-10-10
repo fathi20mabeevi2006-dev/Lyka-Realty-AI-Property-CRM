@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit User' if user else 'New User' }} | Users{% endblock %}
+{% block page_title %}{{ 'Edit User' if user else 'New User' }}{% endblock %}
+{% block page_subtitle %}{{ user.username if user else 'Create a staff or client account' }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="post" class="crm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" class="input" required
+                   value="{{ form.get('username') if form else (user.username if user else '') }}"
+                   {{ 'disabled' if user }} />
+            {% if user %}<p class="hint">Usernames cannot be changed.</p>{% endif %}
+        </div>
+
+        <div class="field">
+            <label for="full_name">Full name</label>
+            <input type="text" id="full_name" name="full_name" class="input"
+                   value="{{ form.get('full_name') if form else (user.full_name or '') }}" />
+        </div>
+
+        <div class="field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" class="input"
+                   value="{{ form.get('email') if form else (user.email or '') }}" />
+        </div>
+
+        <div class="field">
+            <label for="department">Department</label>
+            <input type="text" id="department" name="department" class="input"
+                   value="{{ form.get('department') if form else (user.department or '') }}" />
+        </div>
+
+        <div class="field">
+            <label for="password">{{ 'New password (leave blank to keep current)' if user else 'Password' }}</label>
+            <input type="password" id="password" name="password" class="input"
+                   autocomplete="new-password" {{ 'required' if not user }} />
+        </div>
+
+        <div class="field">
+            <label>Status</label>
+            <div class="radio-row">
+                {% for s in valid_statuses %}
+                <label class="radio-inline">
+                    <input type="radio" name="status" value="{{ s }}"
+                        {{ 'checked' if user and user.status == s }} {{ 'checked' if not user and s == 'Active' }} />
+                    {{ s }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Roles</label>
+            <div class="radio-row">
+                {% for r in available_roles %}
+                <label class="radio-inline">
+                    <input type="checkbox" name="roles" value="{{ r }}"
+                        {{ 'checked' if (user and r in current_roles) or (form and r in form.getlist('roles')) }} />
+                    {{ r }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ 'Save changes' if user else 'Create user' }}</button>
+            <a href="{{ url_for('auth.users_list') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

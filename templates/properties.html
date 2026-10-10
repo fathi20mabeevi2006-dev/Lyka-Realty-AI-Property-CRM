@@ -28,9 +28,9 @@
                 {% endfor %}
                 <option value="None" {{ 'selected' if view == 'None' }}>None (no view)</option>
             </select>
-            <input type="number" name="min_price" class="input" placeholder="Min price ₹" min="0"
+            <input type="number" name="min_price" class="input" placeholder="Min price {{ CURRENCY }}" min="0"
                    value="{{ min_price or '' }}" aria-label="Minimum price" />
-            <input type="number" name="max_price" class="input" placeholder="Max price ₹" min="0"
+            <input type="number" name="max_price" class="input" placeholder="Max price {{ CURRENCY }}" min="0"
                    value="{{ max_price or '' }}" aria-label="Maximum price" />
             <select name="bedrooms" class="input select" aria-label="Bedrooms">
                 <option value="" {{ 'selected' if not bedrooms }}>Any Beds</option>
@@ -117,7 +117,7 @@
                         <a href="{{ url_for('property_detail_page', property_id=p.id) }}">{{ p.name }}</a>
                     </h3>
                     <p class="property-location">📍 {{ p.location }}</p>
-                    <p class="property-price">₹{{ "{:,.0f}".format(p.price) }}</p>
+                    <p class="property-price">{{ CURRENCY }} {{ "{:,.0f}".format(p.price) }}</p>
                     <div class="property-meta">
                         <span>🛏 {{ p.bedrooms }} bed{{ '' if p.bedrooms == 1 else 's' }}</span>
                         <span>🛁 {{ p.bathrooms }} bath{{ '' if p.bathrooms == 1 else 's' }}</span>
@@ -126,6 +126,7 @@
                         <a href="{{ url_for('edit_property_page', property_id=p.id) }}" class="btn btn-ghost btn-xs">✏️ Edit</a>
                         <form method="post" action="{{ url_for('delete_property_page', property_id=p.id) }}"
                               onsubmit="return confirm('Delete {{ p.name }}?');" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-xs">🗑 Delete</button>
                         </form>
                     </div>

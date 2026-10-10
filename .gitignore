@@ -4,3 +4,6 @@ server.log
 server_err.log
 .env
 _ui_backup/
+backups/
+*.db
+static/uploads/

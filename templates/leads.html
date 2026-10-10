@@ -30,9 +30,9 @@
             </select>
             <input type="number" name="min_score" class="input" placeholder="Min score (0-100)" min="0" max="100"
                    value="{{ min_score or '' }}" aria-label="Minimum lead score" />
-            <input type="number" name="min_budget" class="input" placeholder="Min budget ₹" min="0"
+            <input type="number" name="min_budget" class="input" placeholder="Min budget {{ CURRENCY }}" min="0"
                    value="{{ min_budget or '' }}" aria-label="Minimum budget" />
-            <input type="number" name="max_budget" class="input" placeholder="Max budget ₹" min="0"
+            <input type="number" name="max_budget" class="input" placeholder="Max budget {{ CURRENCY }}" min="0"
                    value="{{ max_budget or '' }}" aria-label="Maximum budget" />
         </div>
         <div class="filter-actions">
@@ -79,7 +79,7 @@
                     </td>
                     <td>{{ l.phone or '—' }}</td>
                     <td>{{ l.email or '—' }}</td>
-                    <td class="price">{% if l.budget %}₹{{ "{:,.0f}".format(l.budget) }}{% else %}—{% endif %}</td>
+                    <td class="price">{% if l.budget %}{{ CURRENCY }} {{ "{:,.0f}".format(l.budget) }}{% else %}—{% endif %}</td>
                     <td>{{ l.preferred_location or '—' }}</td>
                     <td>{{ l.bedrooms_needed or '—' }}</td>
                     <td>{{ l.lead_source or '—' }}</td>
@@ -108,6 +108,7 @@
                             <span class="badge badge-{{ l.status|lower }}">{{ l.status }}</span>
                             <form method="post" action="{{ url_for('update_lead_status_page', lead_id=l.id) }}"
                                   class="inline-form status-quick-form">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <select name="status" class="input select status-quick" aria-label="Change status"
                                         onchange="this.form.submit()">
                                     {% for s in ['New', 'Contacted', 'Qualified', 'Closed', 'Lost'] %}
@@ -121,6 +122,7 @@
                         <a href="{{ url_for('edit_lead_page', lead_id=l.id) }}" class="btn btn-ghost btn-xs">Edit</a>
                         <form method="post" action="{{ url_for('delete_lead_page', lead_id=l.id) }}"
                               onsubmit="return confirm('Delete {{ l.client_name }}?');" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-danger btn-xs">Delete</button>
                         </form>
                     </td>

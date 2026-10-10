@@ -7,6 +7,7 @@
 <section class="panel form-panel">
     <div class="panel-body">
         <form method="post" enctype="multipart/form-data" class="crm-form" id="propertyForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
 
                 {# ---------- Section: Basic details ---------- #}
@@ -27,7 +28,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="price">Price (₹) <span class="req">*</span></label>
+                    <label for="price">Price ({{ CURRENCY }}) <span class="req">*</span></label>
                     <input type="number" id="price" name="price" class="input" min="0" step="1"
                            value="{{ property.price if property else '' }}"
                            placeholder="e.g. 12000000" required />
@@ -150,6 +151,7 @@
                           action="{{ url_for('delete_property_image_page', property_id=property.id, image_id=img.id) }}"
                           onsubmit="return confirm('Delete this photo?');"
                           class="inline-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="photo-remove" title="Delete photo">✕</button>
                     </form>
                 </div>

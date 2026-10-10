@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% block title %}BRD Generator{% endblock %}
+{% block page_title %}Business Requirements Document{% endblock %}
+{% block page_subtitle %}
+Preview and download your BRD — created automatically from your Business Analysis notes and Requirements
+{% endblock %}
+
+{% block content %}
+
+{% if not pdf_available %}
+<div class="panel">
+    <div class="panel-body">
+        <p class="empty-state" style="text-align:left;">
+            ⚠️ <strong>PDF export is unavailable:</strong> the <code>fpdf2</code>
+            library is not installed in this environment, so the Download button
+            has been disabled. The preview below still works. To enable PDF
+            export, run <code>pip install fpdf2</code>.
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== Summary cards ===== -->
+<section class="stat-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon" aria-hidden="true">📓</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(doc.totals.business_notes) }}</span>
+            <span class="stat-label">Business Notes</span>
+            <span class="stat-sub">From Business Analysis</span>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon" aria-hidden="true">📋</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(doc.totals.requirements) }}</span>
+            <span class="stat-label">Requirements</span>
+            <span class="stat-sub">Functional + non-functional</span>
+        </div>
+    </div>
+    <div class="stat-card stat-red">
+        <div class="stat-icon" aria-hidden="true">🔍</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(doc.gap_summary.gap_count) }}</span>
+            <span class="stat-label">Gap(s) Found</span>
+            <span class="stat-sub">Current vs desired state</span>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon" aria-hidden="true">ℹ️</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(doc.missing|length) }}</span>
+            <span class="stat-label">Info to Add</span>
+            <span class="stat-sub">Missing / not documented</span>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Toolbar ===== -->
+<div class="toolbar">
+    <div class="filter-panel">
+        <div class="filter-panel-title">📄 Document</div>
+        <div class="filter-grid filter-grid-wide">
+            <div class="filter-count" style="padding:0.55rem 0;">
+                <strong>{{ doc.meta.title }}</strong> · {{ doc.meta.company }}<br>
+                <span class="muted">Prepared automatically on {{ doc.meta.generated_at }}
+                from your data — the preview and PDF are always in sync.</span>
+            </div>
+        </div>
+    </div>
+    {% if pdf_available %}
+    <a href="{{ url_for('brd_export') }}" class="btn btn-primary">⬇️ Download PDF</a>
+    {% else %}
+    <button type="button" class="btn btn-primary" disabled title="Install fpdf2 to enable PDF export">⬇️ Download PDF</button>
+    {% endif %}
+</div>
+
+<!-- ===== 1. Current State ===== -->
+<section class="panel">
+    <div class="panel-header">
+        <h2>1. Current State (Verified Facts)</h2>
+        <span class="muted">{{ doc.current_state.stats_label }}</span>
+    </div>
+    <div class="panel-body table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr><th>Fact</th><th>Value</th><th>Notes on reliability</th></tr>
+            </thead>
+            <tbody>
+                {% for item in doc.current_state.facts %}
+                <tr>
+                    <td><strong>{{ item.label }}</strong></td>
+                    <td><span class="badge badge-fact">{{ item.value }}</span></td>
+                    <td class="muted">{{ item.note }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ===== 2. Company Profile ===== -->
+<section class="panel">
+    <div class="panel-header"><h2>2. Company Profile</h2></div>
+    <div class="panel-body">
+        {% set items = doc.company_profile %}
+        {% if items %}
+        <div class="mini-list">
+            {% for e in items %}
+            <article class="mini-item">
+                <div class="mini-info">
+                    <div class="mini-meta">
+                        <span class="badge badge-{{ e.source_type|lower }}">{{ e.source_type }}</span>
+                        <span class="badge badge-{{ e.status|lower|replace(' ', '-') }}">{{ e.status }}</span>
+                        <span class="muted">{{ e.category }}</span>
+                    </div>
+                    <strong>{{ e.title }}</strong>
+                    {% if e.details %}<p class="muted small" style="margin-top:0.3rem;">{{ e.details }}</p>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">Nothing documented yet — see section 12 (Missing Information).</p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ===== 3. Objectives ===== -->
+<section class="panel">
+    <div class="panel-header"><h2>3. Business Objectives</h2></div>
+    <div class="panel-body">
+        {% set items = doc.objectives %}
+        {% if items %}
+        <div class="mini-list">
+            {% for e in items %}
+            <article class="mini-item">
+                <div class="mini-info">
+                    <div class="mini-meta">
+                        <span class="badge badge-{{ e.source_type|lower }}">{{ e.source_type }}</span>
+                        <span class="badge badge-{{ e.status|lower|replace(' ', '-') }}">{{ e.status }}</span>
+                    </div>
+                    <strong>{{ e.title }}</strong>
+                    {% if e.details %}<p class="muted small" style="margin-top:0.3rem;">{{ e.details }}</p>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">Nothing documented yet — see section 12 (Missing Information).</p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ===== 4/5/6. Facts, Assumptions, Recommendations ===== -->
+{% for heading, items in (
+    ('4. Documented Facts', doc.fact_base),
+    ('5. Assumptions', doc.assumptions),
+    ('6. Recommendations', doc.recommendations),
+) %}
+<section class="panel">
+    <div class="panel-header"><h2>{{ heading }}</h2></div>
+    <div class="panel-body">
+        {% if items %}
+        <div class="mini-list">
+            {% for e in items %}
+            <article class="mini-item">
+                <div class="mini-info">
+                    <div class="mini-meta">
+                        <span class="badge badge-{{ e.source_type|lower }}">{{ e.source_type }}</span>
+                        <span class="badge badge-{{ e.status|lower|replace(' ', '-') }}">{{ e.status }}</span>
+                        <span class="muted">{{ e.category }}</span>
+                    </div>
+                    <strong>{{ e.title }}</strong>
+                    {% if e.details %}<p class="muted small" style="margin-top:0.3rem;">{{ e.details }}</p>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">Nothing documented yet — see section 12 (Missing Information).</p>
+        {% endif %}
+    </div>
+</section>
+{% endfor %}
+
+<!-- ===== 7/8. Problems & Solutions ===== -->
+{% for heading, items in (
+    ('7. Identified Business Problems', doc.problems),
+    ('8. Proposed Solutions', doc.solutions),
+) %}
+<section class="panel">
+    <div class="panel-header"><h2>{{ heading }}</h2></div>
+    <div class="panel-body table-wrap">
+        {% if items %}
+        <table class="data-table">
+            <thead><tr><th>Requirement</th><th>{{ 'Problem' if loop.first else 'Solution' }}</th><th>Priority</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td class="muted">{{ item.text or '— not documented —' }}</td>
+                    <td><span class="badge badge-{{ item.priority|lower }}">{{ item.priority }}</span></td>
+                    <td><span class="badge badge-{{ item.status|lower|replace(' ', '-') }}">{{ item.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">Nothing documented yet — see section 12 (Missing Information).</p>
+        {% endif %}
+    </div>
+</section>
+{% endfor %}
+
+<!-- ===== 9/10. Requirements ===== -->
+{% for heading, reqs in (
+    ('9. Functional Requirements', doc.functional),
+    ('10. Non-Functional Requirements', doc.non_functional),
+) %}
+<section class="panel">
+    <div class="panel-header"><h2>{{ heading }}</h2></div>
+    <div class="panel-body table-wrap">
+        {% if reqs %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Requirement</th><th>Priority</th><th>Status</th><th>Owner</th>
+                    <th>Acceptance criteria</th><th>Gap</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reqs %}
+                <tr>
+                    <td>
+                        <strong>{{ r.title }}</strong>
+                        {% if r.description %}<p class="muted small" style="margin:0.2rem 0 0;">{{ r.description }}</p>{% endif %}
+                    </td>
+                    <td><span class="badge badge-{{ r.priority|lower }}">{{ r.priority }}</span></td>
+                    <td><span class="badge badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                    <td class="muted">{{ r.owner or '—' }}</td>
+                    <td class="muted">{{ r.acceptance_criteria or '— not documented —' }}</td>
+                    <td>
+                        <span class="badge {{ 'badge-gap' if r.has_gap else 'badge-no-gap' }}">
+                            {{ 'Gap' if r.has_gap else 'No gap' }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">Nothing documented yet — see section 12 (Missing Information).</p>
+        {% endif %}
+    </div>
+</section>
+{% endfor %}
+
+<!-- ===== 11. Gap Summary ===== -->
+<section class="panel">
+    <div class="panel-header"><h2>11. Gap Analysis Summary</h2></div>
+    <div class="panel-body">
+        <p class="muted">
+            {{ "{:,}".format(doc.gap_summary.total) }} requirement(s) considered;
+            <strong>{{ "{:,}".format(doc.gap_summary.gap_count) }} gap(s)</strong> identified
+            (current state differs from desired state).
+        </p>
+        {% if doc.gap_summary.gaps %}
+        <div class="mini-list" style="margin-top:0.8rem;">
+            {% for item in doc.gap_summary.gaps %}
+            <article class="mini-item">
+                <div class="mini-info">
+                    <div class="mini-meta">
+                        <span class="badge badge-gap">Gap identified</span>
+                        <span class="badge badge-{{ item.priority|lower }}">{{ item.priority }}</span>
+                        <span class="badge badge-{{ item.status|lower|replace(' ', '-') }}">{{ item.status }}</span>
+                    </div>
+                    <strong>{{ item.title }}</strong>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No gaps detected in the current requirements.</p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ===== 12. Missing Information ===== -->
+<section class="panel">
+    <div class="panel-header"><h2>12. Missing Information</h2></div>
+    <div class="panel-body">
+        {% if doc.missing %}
+        <ul class="mini-list" style="list-style:none;margin:0;padding:0;">
+            {% for text in doc.missing %}
+            <li class="mini-item" style="padding:0.55rem 0;border-bottom:1px solid var(--border);">
+                <span class="muted">• {{ text }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state">No missing information detected in the current notes and requirements.</p>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

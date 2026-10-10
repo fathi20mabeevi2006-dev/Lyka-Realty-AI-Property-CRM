@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Requirements{% endblock %}
+{% block page_title %}Requirements{% endblock %}
+{% block page_subtitle %}Track business problems, proposed solutions and functional / non-functional requirements{% endblock %}
+
+{% block content %}
+
+<!-- ===== Summary cards ===== -->
+<section class="stat-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon" aria-hidden="true">📋</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.total) }}</span>
+            <span class="stat-label">Total Requirements</span>
+            <span class="stat-sub">{{ "{:,}".format(summary.by_type.get('Functional', 0)) }} functional · {{ "{:,}".format(summary.by_type.get('Non-Functional', 0)) }} non-functional</span>
+        </div>
+    </div>
+    <div class="stat-card stat-red">
+        <div class="stat-icon" aria-hidden="true">🔥</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_priority.get('High', 0)) }}</span>
+            <span class="stat-label">High Priority</span>
+            <span class="stat-sub">Must-have work</span>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon" aria-hidden="true">✅</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_status.get('Done', 0)) }}</span>
+            <span class="stat-label">Done</span>
+            <span class="stat-sub">Completed requirements</span>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon" aria-hidden="true">⏳</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_status.get('In Progress', 0)) }}</span>
+            <span class="stat-label">In Progress</span>
+            <span class="stat-sub">Active work items</span>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Filters ===== -->
+<div class="toolbar">
+    <form method="get" class="filter-panel" id="requirementFilterForm">
+        <div class="filter-panel-title">🔎 Find a requirement</div>
+        <div class="filter-grid">
+            <input type="text" name="q" class="input" placeholder="🔍 Search title, problem, owner…"
+                   value="{{ q or '' }}" aria-label="Search" />
+            <select name="req_type" class="input select" aria-label="Type">
+                <option value="" {{ 'selected' if not req_type }}>Any Type</option>
+                {% for t in req_types %}
+                    <option value="{{ t }}" {{ 'selected' if req_type == t }}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            <select name="category" class="input select" aria-label="Category">
+                <option value="" {{ 'selected' if not category }}>Any Category</option>
+                {% for c in categories %}
+                    <option value="{{ c }}" {{ 'selected' if category == c }}>{{ c }}</option>
+                {% endfor %}
+            </select>
+            <select name="priority" class="input select" aria-label="Priority">
+                <option value="" {{ 'selected' if not priority }}>Any Priority</option>
+                {% for p in priorities %}
+                    <option value="{{ p }}" {{ 'selected' if priority == p }}>{{ p }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="input select" aria-label="Status">
+                <option value="" {{ 'selected' if not status }}>Any Status</option>
+                {% for s in statuses %}
+                    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
+            <a href="{{ url_for('requirements_page') }}" class="btn btn-ghost btn-sm">Clear all</a>
+            <span class="filter-count">{{ items|length }} result{{ '' if items|length == 1 else 's' }}</span>
+        </div>
+    </form>
+    <a href="{{ url_for('add_requirement_page') }}" class="btn btn-primary">➕ Add Requirement</a>
+</div>
+
+<!-- ===== Requirements table ===== -->
+<section class="panel">
+    <div class="panel-header">
+        <h2>Requirements</h2>
+        <span class="muted">{{ items|length }} result{{ '' if items|length == 1 else 's' }}</span>
+    </div>
+    <div class="panel-body table-wrap">
+        {% if items %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Owner</th>
+                    <th>Problem / Solution</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in items %}
+                <tr>
+                    <td>
+                        <strong>{{ r.title }}</strong>
+                        {% if (r.current_state or '') and (r.desired_state or '') and r.current_state != r.desired_state %}
+                            <span class="badge badge-gap">Gap</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge badge-{{ r.req_type|lower|replace('-', '-') }}">{{ r.req_type }}</span></td>
+                    <td class="muted">{{ r.category or '—' }}</td>
+                    <td><span class="badge badge-{{ r.priority|lower }}">{{ r.priority }}</span></td>
+                    <td><span class="badge badge-{{ r.status|lower|replace(' ', '-') }}">{{ r.status }}</span></td>
+                    <td class="muted">{{ r.owner or '—' }}</td>
+                    <td class="muted" title="{{ r.problem or '' }} → {{ r.proposed_solution or '' }}">
+                        {%- set pb = r.problem or '' -%}
+                        {%- set ps = r.proposed_solution or '' -%}
+                        {% if pb or ps %}{{ pb[:40] }}{% if pb|length > 40 %}…{% endif %}{% if pb and ps %} → {% endif %}{{ ps[:20] }}{% if ps|length > 20 %}…{% endif %}{% else %}—{% endif %}
+                    </td>
+                    <td class="muted">{{ (r.updated_at or r.created_at or '—')[:10] }}</td>
+                    <td class="actions-cell">
+                        <a href="{{ url_for('edit_requirement_page', req_id=r.id) }}" class="btn btn-ghost btn-xs">Edit</a>
+                        <form method="post" action="{{ url_for('delete_requirement_page', req_id=r.id) }}"
+                              onsubmit="return confirm('Delete requirement “{{ r.title }}”?');" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">
+            No requirements yet. <a href="{{ url_for('add_requirement_page') }}">Add your first requirement</a>
+            or start from the
+            <a href="{{ url_for('gap_analysis_page') }}">gap analysis</a>.
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

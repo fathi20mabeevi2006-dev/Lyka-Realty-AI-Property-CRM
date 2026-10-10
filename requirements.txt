@@ -1,1 +1,4 @@
 Flask>=3.0.0
+groq>=1.0.0
+python-dotenv>=1.0.0
+fpdf2>=2.7.0

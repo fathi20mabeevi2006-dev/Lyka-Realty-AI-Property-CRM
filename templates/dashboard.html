@@ -90,7 +90,7 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value is-currency">₹{{ "{:,.0f}".format(stats.portfolio_value) }}</span>
+            <span class="stat-value is-currency">{{ CURRENCY }} {{ "{:,.0f}".format(stats.portfolio_value) }}</span>
             <span class="stat-label">Portfolio Value</span>
             <span class="stat-sub">Sum of listed prices ({{ "{:,}".format(stats.priced_count) }} listings)</span>
         </div>
@@ -104,7 +104,7 @@
             </svg>
         </div>
         <div class="stat-body">
-            <span class="stat-value is-currency">₹{{ "{:,.0f}".format(stats.average_price) }}</span>
+            <span class="stat-value is-currency">{{ CURRENCY }} {{ "{:,.0f}".format(stats.average_price) }}</span>
             <span class="stat-label">Average Property Price</span>
             <span class="stat-sub">Mean listed price of the same {{ "{:,}".format(stats.priced_count) }} listings</span>
         </div>
@@ -258,11 +258,11 @@
             <div class="summary-block">
                 <div class="summary-line">
                     <span>Total pipeline budget</span>
-                    <strong>₹{{ "{:,.0f}".format(lead_summary.total_budget) }}</strong>
+                    <strong>{{ CURRENCY }} {{ "{:,.0f}".format(lead_summary.total_budget) }}</strong>
                 </div>
                 <div class="summary-line">
                     <span>Average lead budget</span>
-                    <strong>₹{{ "{:,.0f}".format(lead_summary.average_budget) }}</strong>
+                    <strong>{{ CURRENCY }} {{ "{:,.0f}".format(lead_summary.average_budget) }}</strong>
                 </div>
                 <div class="summary-line">
                     <span>Closed conversion</span>
@@ -327,7 +327,7 @@
                     </div>
                     <div class="mini-meta">
                         <span class="badge badge-{{ p.status|lower }}">{{ p.status }}</span>
-                        <span class="price">₹{{ "{:,.0f}".format(p.price) }}</span>
+                        <span class="price">{{ CURRENCY }} {{ "{:,.0f}".format(p.price) }}</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -355,7 +355,7 @@
                     <div class="mini-meta">
                         <span class="badge badge-{{ l.status|lower|replace(' ', '-') }}">{{ l.status }}</span>
                         {% if l.budget %}
-                        <span class="price">₹{{ "{:,.0f}".format(l.budget) }}</span>
+                        <span class="price">{{ CURRENCY }} {{ "{:,.0f}".format(l.budget) }}</span>
                         {% endif %}
                     </div>
                 </div>

@@ -12,6 +12,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* ---------- helpers ---------- */
 
+    function getCsrfToken() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute("content") : "";
+    }
+
     function escapeHtml(text) {
         const div = document.createElement("div");
         div.textContent = text;
@@ -82,7 +87,10 @@ function speakText(text) {
         try {
             const response = await fetch("/api/assistant", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCsrfToken(),
+                },
                 body: JSON.stringify({ message: text }),
             });
 

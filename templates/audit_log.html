@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+{% block page_subtitle %}Security-sensitive actions (most recent first){% endblock %}
+
+{% block content %}
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>When</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Details</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td class="muted">{{ log.created_at }}</td>
+                <td>{{ log.actor or '—' }}</td>
+                <td><span class="pill pill-info">{{ log.action }}</span></td>
+                <td>{{ log.entity_type or '' }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</td>
+                <td>{{ (log.details or '')[:120] }}</td>
+                <td class="muted">{{ log.ip_address or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="empty-cell">No audit events recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

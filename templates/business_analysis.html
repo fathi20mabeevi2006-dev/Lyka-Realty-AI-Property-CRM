@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Business Analysis{% endblock %}
+{% block page_title %}Business Analysis{% endblock %}
+{% block page_subtitle %}
+Record your business model, objectives, customers, workflows, software and risks
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== Summary cards ===== -->
+<section class="stat-grid">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon" aria-hidden="true">📓</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.total) }}</span>
+            <span class="stat-label">Total Notes</span>
+            <span class="stat-sub">Across all categories</span>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon" aria-hidden="true">✅</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_source.get('Fact', 0)) }}</span>
+            <span class="stat-label">Facts</span>
+            <span class="stat-sub">Confirmed information</span>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon" aria-hidden="true">💡</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_source.get('Assumption', 0)) }}</span>
+            <span class="stat-label">Assumptions</span>
+            <span class="stat-sub">Unverified expectations</span>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon" aria-hidden="true">🧭</div>
+        <div class="stat-body">
+            <span class="stat-value">{{ "{:,}".format(summary.by_source.get('Recommendation', 0)) }}</span>
+            <span class="stat-label">Recommendations</span>
+            <span class="stat-sub">Suggested improvements</span>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Filters ===== -->
+<div class="toolbar">
+    <form method="get" class="filter-panel" id="businessFilterForm">
+        <div class="filter-panel-title">🔎 Find a note</div>
+        <div class="filter-grid">
+            <input type="text" name="q" class="input" placeholder="🔍 Search title or details…"
+                   value="{{ q or '' }}" aria-label="Search" />
+            <select name="category" class="input select" aria-label="Category">
+                <option value="" {{ 'selected' if not category }}>Any Category</option>
+                {% for c in categories %}
+                    <option value="{{ c }}" {{ 'selected' if category == c }}>{{ c }}</option>
+                {% endfor %}
+            </select>
+            <select name="source_type" class="input select" aria-label="Source type">
+                <option value="" {{ 'selected' if not source_type }}>Any Source</option>
+                {% for s in source_types %}
+                    <option value="{{ s }}" {{ 'selected' if source_type == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="input select" aria-label="Status">
+                <option value="" {{ 'selected' if not status }}>Any Status</option>
+                {% for s in statuses %}
+                    <option value="{{ s }}" {{ 'selected' if status == s }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary btn-sm">🔍 Apply Filters</button>
+            <a href="{{ url_for('business_page') }}" class="btn btn-ghost btn-sm">Clear all</a>
+            <span class="filter-count">{{ entries|length }} note{{ '' if entries|length == 1 else 's' }}</span>
+        </div>
+    </form>
+    <a href="{{ url_for('add_business_page') }}" class="btn btn-primary">➕ Add Note</a>
+</div>
+
+<!-- ===== Entries table ===== -->
+<section class="panel">
+    <div class="panel-header">
+        <h2>Business Notes</h2>
+        <span class="muted">{{ entries|length }} result{{ '' if entries|length == 1 else 's' }}</span>
+    </div>
+    <div class="panel-body table-wrap">
+        {% if entries %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Details</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Recorded by</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entries %}
+                <tr>
+                    <td><strong>{{ e.title }}</strong></td>
+                    <td><span class="badge badge-{{ e.category|lower|replace(' & ', '-')|replace(' / ', '-')|replace(' ', '-') }}">{{ e.category }}</span></td>
+                    <td class="muted" title="{{ e.details or '' }}">{{ (e.details or '—')[:90] }}{% if e.details and e.details|length > 90 %}…{% endif %}</td>
+                    <td><span class="badge badge-{{ e.source_type|lower }}">{{ e.source_type }}</span></td>
+                    <td><span class="badge badge-{{ e.status|lower|replace(' ', '-') }}">{{ e.status }}</span></td>
+                    <td class="muted">{{ e.created_by or '—' }}</td>
+                    <td class="muted">{{ (e.updated_at or e.created_at or '—')[:10] }}</td>
+                    <td class="actions-cell">
+                        <a href="{{ url_for('edit_business_page', entry_id=e.id) }}" class="btn btn-ghost btn-xs">Edit</a>
+                        <form method="post" action="{{ url_for('delete_business_page', entry_id=e.id) }}"
+                              onsubmit="return confirm('Delete note “{{ e.title }}”?');" class="inline-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-state">
+            No business notes yet. <a href="{{ url_for('add_business_page') }}">Add your first note</a>
+            about your company, objectives, customers or risks.
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

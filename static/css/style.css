@@ -1660,3 +1660,60 @@ a.stat-card:hover { text-decoration: none; }
     .property-card:hover { transform: none; }
     .property-card:hover .property-thumb img { transform: none; }
 }
+
+/* =========================================================
+   PLANNING & STRATEGY WORKSPACES (Phase 3)
+   ========================================================= */
+.badge-fact,
+.badge-approved,
+.badge-done,
+.badge-functional,
+.badge-high {
+    background: var(--green-soft); color: #15803d; border-color: #bbf7d0;
+}
+.badge-assumption,
+.badge-in-progress,
+.badge-medium,
+.badge-reviewed {
+    background: var(--amber-soft); color: #b45309; border-color: #fde68a;
+}
+.badge-recommendation,
+.badge-non-functional,
+.badge-deferred {
+    background: var(--purple-soft); color: #6d28d9; border-color: #ddd6fe;
+}
+.badge-draft,
+.badge-low {
+    background: #e2e8f0; color: #475569; border-color: #cbd5e1;
+}
+.badge-gap {
+    background: #fee2e2; color: #b91c1c; border-color: #fecaca;
+}
+.badge-no-gap {
+    background: #ecfdf5; color: #047857; border-color: #a7f3d0;
+}
+
+/* Two-column comparison block used by the gap analysis view */
+.gap-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+}
+@media (max-width: 720px) { .gap-block { grid-template-columns: 1fr; } }
+.gap-col {
+    padding: 0.75rem 0.9rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+}
+.gap-col-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+    color: var(--text-muted);
+}
+.gap-col-current { border-left: 3px solid #f59e0b; }
+.gap-col-desired { border-left: 3px solid #10b981; }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log in | Lyka Realty CRM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="login-body">
+    <div class="login-shell">
+        <div class="login-card">
+            <a href="{{ url_for('auth.login') }}" class="login-brand">
+                <span class="login-brand-name">Lyka Realty</span>
+                <span class="login-brand-tag">Real Estate Suite</span>
+            </a>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container">
+                        {% for category, message in messages %}
+                            <div class="flash flash-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <h1 class="login-title">Sign in</h1>
+            <p class="login-subtitle">Use your staff or client account to continue.</p>
+
+            <form method="post" class="crm-form" action="{{ url_for('auth.login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="input" required
+                           autocomplete="username" value="{{ username or '' }}" />
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="input" required
+                           autocomplete="current-password" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log in</button>
+            </form>
+
+            <p class="login-meta">Accounts are created by administrators. No public sign-up.</p>
+        </div>
+    </div>
+</body>
+</html>

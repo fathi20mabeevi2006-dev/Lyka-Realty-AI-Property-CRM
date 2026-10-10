@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+{% block page_subtitle %}Your requests and your portfolio access{% endblock %}
+
+{% block content %}
+<div class="cards-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ my_leads|length }}</div>
+        <div class="stat-label">My enquiries / leads</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ featured|length }}</div>
+        <div class="stat-label">Featured properties</div>
+    </div>
+</div>
+
+{% if my_leads %}
+<div class="card">
+    <h3 class="card-title">My requests</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Requirement</th>
+                <th>Status</th>
+                <th>Next follow-up</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in my_leads %}
+            <tr>
+                <td>{{ l.client_name }}</td>
+                <td>{{ l.preferred_location or '—' }}{% if l.bedrooms_needed %} · {{ l.bedrooms_needed }} bed{% endif %}</td>
+                <td><span class="pill pill-info">{{ l.status }}</span></td>
+                <td class="muted">{{ l.next_follow_up or '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <p class="empty-cell">You have no recorded enquiries yet. Browse the property portfolio to get started.</p>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3 class="card-title">Browse the portfolio</h3>
+    <p>View all available properties in the catalogue: <a href="{{ url_for('properties_page') }}">Properties</a>.</p>
+</div>
+{% endblock %}

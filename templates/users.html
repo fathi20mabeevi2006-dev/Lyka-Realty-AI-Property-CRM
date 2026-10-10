@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Users & Roles{% endblock %}
+{% block page_title %}Users & Roles{% endblock %}
+{% block page_subtitle %}Staff and client accounts (managed by administrators){% endblock %}
+
+{% block content %}
+<div class="page-actions">
+    <a href="{{ url_for('auth.users_new') }}" class="btn btn-primary">➕ New User</a>
+</div>
+
+<div class="card">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Roles</th>
+                <th>Status</th>
+                <th>Last login</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td>{{ u.username }}</td>
+                <td>{{ u.full_name or '—' }}</td>
+                <td>{{ u.email or '—' }}</td>
+                <td>{{ u.department or '—' }}</td>
+                <td>
+                    {% for r in roles_by_user.get(u.id, []) %}
+                        <span class="pill pill-info">{{ r }}</span>
+                    {% else %}
+                        <span class="muted">no roles</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <span class="pill {{ 'pill-yes' if u.status == 'Active' else 'pill-no' }}">{{ u.status }}</span>
+                </td>
+                <td>{{ u.last_login_at or '—' }}</td>
+                <td class="row-actions">
+                    <a class="btn btn-ghost btn-sm" href="{{ url_for('auth.users_edit', user_id=u.id) }}">Edit</a>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty-cell">No users yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Requirement' if action == 'edit' else 'Add Requirement' }}{% endblock %}
+{% block page_title %}{{ 'Edit Requirement' if action == 'edit' else 'Add Requirement' }}{% endblock %}
+{% block page_subtitle %}
+Describe the problem, the proposed solution and how you will know it is done
+{% endblock %}
+
+{% block content %}
+<section class="panel form-panel">
+    <div class="panel-body">
+        <form method="post" class="crm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-grid">
+
+                <div class="form-section-title span-2">Requirement</div>
+
+                <div class="form-group span-2">
+                    <label for="title">Title <span class="req">*</span></label>
+                    <input type="text" id="title" name="title" class="input"
+                           value="{{ req.title if req else '' }}"
+                           placeholder="e.g. Filter properties by budget range" required />
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" class="input" rows="3"
+                              placeholder="What does this requirement cover?">{{ req.description if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="req_type">Type</label>
+                    <select id="req_type" name="req_type" class="input select">
+                        {% set current_type = req.req_type if req else 'Functional' %}
+                        {% for t in req_types %}
+                            <option value="{{ t }}" {{ 'selected' if current_type == t }}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" class="input select">
+                        {% set current_cat = req.category if req else 'Other' %}
+                        {% for c in categories %}
+                            <option value="{{ c }}" {{ 'selected' if current_cat == c }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="priority">Priority</label>
+                    <select id="priority" name="priority" class="input select">
+                        {% set current_pri = req.priority if req else 'Medium' %}
+                        {% for p in priorities %}
+                            <option value="{{ p }}" {{ 'selected' if current_pri == p }}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status" class="input select">
+                        {% set current_status = req.status if req else 'Draft' %}
+                        {% for s in statuses %}
+                            <option value="{{ s }}" {{ 'selected' if current_status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="owner">Responsible person / department</label>
+                    <input type="text" id="owner" name="owner" class="input"
+                           value="{{ req.owner if req else '' }}"
+                           placeholder="e.g. Sales team, IT, Me" />
+                </div>
+
+                <div class="form-section-title span-2">Problem &amp; Solution</div>
+
+                <div class="form-group span-2">
+                    <label for="problem">Current business problem</label>
+                    <textarea id="problem" name="problem" class="input" rows="3"
+                              placeholder="What problem does this solve today?">{{ req.problem if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="proposed_solution">Proposed solution</label>
+                    <textarea id="proposed_solution" name="proposed_solution" class="input" rows="3"
+                              placeholder="How should the new system solve it?">{{ req.proposed_solution if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="acceptance_criteria">Acceptance criteria</label>
+                    <textarea id="acceptance_criteria" name="acceptance_criteria" class="input" rows="3"
+                              placeholder="How will you know this is done? e.g. 'User can filter by price range and results update instantly'">{{ req.acceptance_criteria if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="dependencies">Dependencies</label>
+                    <textarea id="dependencies" name="dependencies" class="input" rows="3"
+                              placeholder="Anything this depends on…">{{ req.dependencies if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="risks">Risks</label>
+                    <textarea id="risks" name="risks" class="input" rows="3"
+                              placeholder="What could go wrong?">{{ req.risks if req else '' }}</textarea>
+                </div>
+
+                <div class="form-section-title span-2">Gap Analysis</div>
+
+                <div class="form-group">
+                    <label for="current_state">Current state (how it works today)</label>
+                    <textarea id="current_state" name="current_state" class="input" rows="3"
+                              placeholder="Describe today's process…">{{ req.current_state if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="desired_state">Desired state (how it should work)</label>
+                    <textarea id="desired_state" name="desired_state" class="input" rows="3"
+                              placeholder="Describe the target process…">{{ req.desired_state if req else '' }}</textarea>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="gap_notes">Gap notes / recommended improvements</label>
+                    <textarea id="gap_notes" name="gap_notes" class="input" rows="3"
+                              placeholder="What is missing between current and desired?">{{ req.gap_notes if req else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    {{ '💾 Save Changes' if action == 'edit' else '➕ Add Requirement' }}
+                </button>
+                <a href="{{ url_for('requirements_page') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

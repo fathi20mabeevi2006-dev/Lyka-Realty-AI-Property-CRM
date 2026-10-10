@@ -7,6 +7,7 @@
 <section class="panel form-panel">
     <div class="panel-body">
         <form method="post" class="crm-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-grid">
 
                 <div class="form-section-title span-2">Client Details</div>
@@ -35,7 +36,7 @@
                 <div class="form-section-title span-2">Requirements</div>
 
                 <div class="form-group">
-                    <label for="budget">Budget (₹)</label>
+                    <label for="budget">Budget ({{ CURRENCY }})</label>
                     <input type="number" id="budget" name="budget" class="input" min="0"
                            value="{{ lead.budget if lead and lead.budget is not none else '' }}"
                            placeholder="e.g. 15000000" />
